@@ -1,9 +1,9 @@
-# Dependabot configuration for Zoo-Code
-# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
-
+# Dependabot configuration
+# Docs: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates
 version: 2
+
 updates:
-  # Keep npm dependencies up to date
+  # NPM (Node.js) dependencies
   - package-ecosystem: "npm"
     directory: "/"
     schedule:
@@ -12,51 +12,39 @@ updates:
       time: "09:00"
       timezone: "America/Monterrey"
     open-pull-requests-limit: 10
-    reviewers:
-      - "proyectoauraorg"
     labels:
       - "dependencies"
       - "automated"
     commit-message:
-      prefix: "chore(deps):"
+      prefix: "deps"
+      prefix-development: "deps-dev"
     groups:
-      vscode-dependencies:
-        patterns:
-          - "@vscode/*"
-          - "vscode-*"
-      testing-dependencies:
-        patterns:
-          - "vitest"
-          - "@vitest/*"
-          - "playwright"
-          - "@playwright/*"
-          - "jest"
-          - "@jest/*"
-      typescript-dependencies:
-        patterns:
-          - "typescript"
-          - "@types/*"
-          - "ts-*"
-      eslint-dependencies:
-        patterns:
-          - "eslint"
-          - "eslint-*"
-          - "@eslint/*"
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
 
-  # Keep GitHub Actions up to date
+  # GitHub Actions
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
       day: "monday"
-      time: "09:00"
-      timezone: "America/Monterrey"
     open-pull-requests-limit: 5
-    reviewers:
-      - "proyectoauraorg"
     labels:
       - "dependencies"
       - "ci"
-      - "automated"
     commit-message:
-      prefix: "ci(deps):"
+      prefix: "ci"
+
+  # Docker
+  - package-ecosystem: "docker"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+      - "docker"
+    commit-message:
+      prefix: "docker"
