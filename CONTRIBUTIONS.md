@@ -7,6 +7,24 @@
 
 ---
 
+## 🔤 Norma Lingüística del Proyecto
+
+### Repositorio Fork (`proyectoauraorg/Zoo-Code`) → 🇪🇸 **Español**
+- Documentación interna, comunicaciones entre colaboradores
+- Mensajes de commit, nombres de ramas
+- Registros en CONTRIBUTIONS.md, notas de desarrollo
+- Todo contenido generado dentro de este repositorio
+
+### Repositorio Upstream (`Zoo-Code-Org/Zoo-Code`) → 🇬🇧 **Inglés**
+- Pull Requests, Issues, comentarios en reviews
+- Descripciones de cambios, títulos, cuerpos de mensajes
+- Cualquier comunicación pública hacia la comunidad upstream
+
+> Esta separación lingüística asegura identidad organizativa interna
+> y máxima accesibilidad para la comunidad internacional.
+
+---
+
 ## Resumen de Contribuciones
 
 | # | Branch | Status | Type | Description |
@@ -14,6 +32,7 @@
 | 1 | `fix/i18n-roo-to-zoo-brand-consistency` | ✅ Listo | Bug fix (i18n) | Reemplazar referencias "Roo" obsoletas con "Zoo" en archivos de idioma |
 | 2 | `feat/user-agent-migration` | ✅ Listo | Mejora (branding) | Migrar User-Agent headers de Roo-Cline a Zoo-Code |
 | 3 | `fix/global-font-size` | ⏸️ Diferido | Mejora (UX) | Normalización global de tamaño de fuente — demasiado invasivo, sin issue |
+| 4 | `fix/199-shift-enter-newline` | ✅ PR creado | Bug fix (UX) | Shift+Enter inserta nueva línea en vez de enviar mensaje vacío (Fixes #199) |
 
 ---
 
@@ -98,6 +117,49 @@ Si se desea en el futuro, implementar en fases:
 
 ---
 
+## PR #4: Fix #199 — Shift+Enter Inserta Nueva Línea en Modo Newline
+
+**PR:** [#202](https://github.com/Zoo-Code-Org/Zoo-Code/pull/202) (abierto)
+**Branch:** `fix/199-shift-enter-newline`
+**Issue:** [#199](https://github.com/Zoo-Code-Org/Zoo-Code/issues/199)
+**Commits:** 1
+**Archivos:** 2 (`ChatTextArea.tsx` + `ChatTextArea.spec.tsx`)
+**Riesgo:** Bajo — cambio de 1 línea lógica + actualización de test
+
+### El Problema
+
+En el modo de comportamiento de Enter configurado como `newline`, Shift+Enter enviaba un mensaje vacío en lugar de insertar una nueva línea. La condición original incluía `event.shiftKey` junto con `ctrlKey` y `metaKey` como combinaciones de envío:
+
+```typescript
+// ANTES (incorrecto)
+if (event.shiftKey || event.ctrlKey || event.metaKey) {
+  event.preventDefault()
+  onSend()
+}
+```
+
+### La Solución
+
+Remover `event.shiftKey` de la condición. Solo Ctrl/Cmd+Enter envían mensajes en modo newline:
+
+```typescript
+// DESPUÉS (correcto)
+if (event.ctrlKey || event.metaKey) {
+  event.preventDefault()
+  onSend()
+}
+```
+
+### Comportamiento Corregido
+
+| Tecla | Modo `submit` (default) | Modo `newline` |
+|-------|--------------------------|----------------|
+| Enter | Enviar mensaje | Nueva línea |
+| Shift+Enter | Nueva línea | Nueva línea ✅ (antes enviaba) |
+| Ctrl/Cmd+Enter | Enviar mensaje | Enviar mensaje |
+
+---
+
 ## Estado de Sincronización con Upstream
 
 **Última sincronización:** 2026-05-19 20:08 CST
@@ -114,6 +176,7 @@ Si se desea en el futuro, implementar en fases:
 | `feat/user-agent-migration` | +1/-1 | ✅ Necesita rebase |
 | `feature/font-size-setting` | +2/-1 | ✅ Necesita rebase |
 | `fix/193-diagnostic-prefix-rename` | +1/-1 | ✅ Necesita rebase |
+| `fix/199-shift-enter-newline` | +1/-0 | ✅ PR #202 creado |
 | `fix/i18n-roo-to-zoo-brand-consistency` | +2/-0 | ✅ Listo para PR |
 | `fix/i18n-roo-to-zoo-operational-strings` | +0/-0 | ✅ Sincronizado |
 | `fix/user-agent-roo-to-zoo-migration` | +0/-1 | ✅ Necesita rebase |
