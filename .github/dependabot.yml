@@ -1,0 +1,62 @@
+# Dependabot configuration for Zoo-Code
+# See: https://docs.github.com/en/code-security/dependabot/dependabot-version-updates/configuration-options-for-the-dependabot.yml-file
+
+version: 2
+updates:
+  # Keep npm dependencies up to date
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Monterrey"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "proyectoauraorg"
+    labels:
+      - "dependencies"
+      - "automated"
+    commit-message:
+      prefix: "chore(deps):"
+    groups:
+      vscode-dependencies:
+        patterns:
+          - "@vscode/*"
+          - "vscode-*"
+      testing-dependencies:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "playwright"
+          - "@playwright/*"
+          - "jest"
+          - "@jest/*"
+      typescript-dependencies:
+        patterns:
+          - "typescript"
+          - "@types/*"
+          - "ts-*"
+      eslint-dependencies:
+        patterns:
+          - "eslint"
+          - "eslint-*"
+          - "@eslint/*"
+
+  # Keep GitHub Actions up to date
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Monterrey"
+    open-pull-requests-limit: 5
+    reviewers:
+      - "proyectoauraorg"
+    labels:
+      - "dependencies"
+      - "ci"
+      - "automated"
+    commit-message:
+      prefix: "ci(deps):"
