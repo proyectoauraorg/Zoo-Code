@@ -7,6 +7,24 @@
 
 ---
 
+## 🔤 Norma Lingüística del Proyecto
+
+### Repositorio Fork (`proyectoauraorg/Zoo-Code`) → 🇪🇸 **Español**
+- Documentación interna, comunicaciones entre colaboradores
+- Mensajes de commit, nombres de ramas
+- Registros en CONTRIBUTIONS.md, notas de desarrollo
+- Todo contenido generado dentro de este repositorio
+
+### Repositorio Upstream (`Zoo-Code-Org/Zoo-Code`) → 🇬🇧 **Inglés**
+- Pull Requests, Issues, comentarios en reviews
+- Descripciones de cambios, títulos, cuerpos de mensajes
+- Cualquier comunicación pública hacia la comunidad upstream
+
+> Esta separación lingüística asegura identidad organizativa interna
+> y máxima accesibilidad para la comunidad internacional.
+
+---
+
 ## Resumen de Contribuciones
 
 | # | Branch | Status | Type | Description |
