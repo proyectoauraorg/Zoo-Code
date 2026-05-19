@@ -58,3 +58,6 @@ roo-cli-*.tar.gz*
 
 # Workspace config files (local to each machine)
 *.code-workspace
+
+# Git config (local to each machine)
+.gitconfig

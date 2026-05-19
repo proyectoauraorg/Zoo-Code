@@ -1,0 +1,19 @@
+# CODEOWNERS - Defines code ownership for automatic review requests
+# See: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owner for everything
+* @proyectoauraorg
+
+# Core extension code
+src/ @proyectoauraorg
+
+# Build and CI configuration
+.github/ @proyectoauraorg
+package.json @proyectoauraorg
+tsconfig*.json @proyectoauraorg
+esbuild.js @proyectoauraorg
+vite.config.*.ts @proyectoauraorg
+
+# Security-sensitive files
+.gitignore @proyectoauraorg
+CODEOWNERS @proyectoauraorg
