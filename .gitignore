@@ -61,3 +61,13 @@ roo-cli-*.tar.gz*
 
 # Git config (local to each machine)
 .gitconfig
+
+# Fork staging directories (not for upstream)
+/upstream-sync/
+/worktrees/
+/patches/
+/issue-research/
+/ci-analysis/
+/abandoned-prs/
+/prompts/
+/automation/
