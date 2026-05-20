@@ -8,14 +8,14 @@ Transform this fork into a **synchronized staging integration branch** aligned c
 
 ## Branch Naming Convention (OBLIGATORY)
 
-| Type     | Prefix     | Example                           |
-|----------|------------|-----------------------------------|
-| Fix      | `fix/`     | `fix/193-diagnostic-prefix`       |
-| Feature  | `feat/`    | `feat/user-agent-migration`       |
-| Refactor | `refactor/`| `refactor/62-remove-stale-mcps`   |
-| Docs     | `docs/`    | `docs/update-user-guide`          |
-| Test     | `test/`    | `test/coverage-marketplace`       |
-| Chore    | `chore/`   | `chore/update-deps`               |
+| Type     | Prefix      | Example                         |
+| -------- | ----------- | ------------------------------- |
+| Fix      | `fix/`      | `fix/193-diagnostic-prefix`     |
+| Feature  | `feat/`     | `feat/user-agent-migration`     |
+| Refactor | `refactor/` | `refactor/62-remove-stale-mcps` |
+| Docs     | `docs/`     | `docs/update-user-guide`        |
+| Test     | `test/`     | `test/coverage-marketplace`     |
+| Chore    | `chore/`    | `chore/update-deps`             |
 
 **Critical rule**: `TYPE/ISSUE-NUMBER-brief-description`
 
@@ -34,6 +34,7 @@ Transform this fork into a **synchronized staging integration branch** aligned c
 ## Social Rules for Maintainers
 
 ### DO:
+
 - Small, focused PRs
 - Semantic commits
 - Clear descriptions
@@ -42,6 +43,7 @@ Transform this fork into a **synchronized staging integration branch** aligned c
 - Include tests
 
 ### DON'T:
+
 - Mega PRs
 - Ideological changes
 - Mass reformats
@@ -53,15 +55,26 @@ Transform this fork into a **synchronized staging integration branch** aligned c
 
 ## PR Validation Checklist (MANDATORY before submission)
 
-| Validation    | Required |
-|---------------|----------|
-| Typecheck     | ✅       |
-| Lint          | ✅       |
-| Tests         | ✅       |
-| Coverage      | ≥95%     |
-| Build         | ✅       |
-| Clean rebase  | ✅       |
-| Conflicts     | 0        |
+### Technical Validation
+
+| Validation   | Required |
+| ------------ | -------- |
+| Typecheck    | ✅       |
+| Lint         | ✅       |
+| Tests        | ✅       |
+| Coverage     | ≥95%     |
+| Build        | ✅       |
+| Clean rebase | ✅       |
+| Conflicts    | 0        |
+
+### Pre-Submission Intelligence
+
+| Check                                    | Required                           |
+| ---------------------------------------- | ---------------------------------- |
+| Existing PRs on same issue?              | ✅ Cross-reference in body         |
+| Title indicates specific file/component? | ✅ Narrow scope                    |
+| Body lists exact changed files?          | ✅ Use "Changes (N files):" format |
+| No heredoc in `gh pr create`?            | ✅ Use `--body-file` instead       |
 
 ---
 
@@ -122,23 +135,24 @@ Maintainer Delivery (official PR upstream)
 
 ## Priority Classification
 
-| Priority | Type                  | Action        |
-|----------|-----------------------|---------------|
-| P0       | CI broken             | Immediate     |
-| P1       | Reproducible bugs     | High priority |
-| P2       | Safe refactors        | Medium        |
-| P3       | DX / docs             | Normal        |
-| P4       | Complex features      | Plan first    |
+| Priority | Type              | Action        |
+| -------- | ----------------- | ------------- |
+| P0       | CI broken         | Immediate     |
+| P1       | Reproducible bugs | High priority |
+| P2       | Safe refactors    | Medium        |
+| P3       | DX / docs         | Normal        |
+| P4       | Complex features  | Plan first    |
 
 ---
 
 ## Current State
 
 - **Sync status**: main === upstream/main ✅
-- **Active PR**: #196 (refactor/62-remove-stale-organizationMcps) — REVIEW_REQUIRED
-- **Pending decision**: feature/font-size-setting branch
-- **Next action**: Issue index (FASE 2)
+- **Active PR**: #16 (fix/193-diagnostic-prefix-v2) — Pending upstream submission
+- **Fork PRs**: #15 (rebrand remnants, broad), #16 (diagnostic prefix, narrow)
+- **Lesson applied**: PR #194 closed as duplicate → re-submitted as PR #16 with narrow scope
+- **Next action**: Submit PR #16 upstream; evaluate PR #15 scope reduction
 
 ---
 
-*Last updated: 2026-05-19T19:01 CDT*
+_Last updated: 2026-05-19T20:35 CDT_
