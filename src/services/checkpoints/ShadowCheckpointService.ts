@@ -457,7 +457,7 @@ export abstract class ShadowCheckpointService extends EventEmitter {
 		workspaceDir: string
 	}) {
 		const workspaceRepoDir = this.workspaceRepoDir({ globalStorageDir, workspaceDir })
-		const branchName = `roo-${taskId}`
+		const branchName = `zoo-${taskId}`
 		const git = createSanitizedGit(workspaceRepoDir)
 		const success = await this.deleteBranch(git, branchName)
 
