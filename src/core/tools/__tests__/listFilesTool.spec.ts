@@ -394,16 +394,18 @@ describe("ListFilesTool", () => {
 		expect(mockCallbacks.handleError).toHaveBeenCalledWith("listing files", error)
 	})
 
-	it("should not reset consecutive mistake count on error", async () => {
+	it("should reset consecutive mistake count after successful validation even when listing fails", async () => {
 		mockTask.consecutiveMistakeCount = 2
 		vi.mocked(listFiles).mockRejectedValue(new Error("fail"))
 		const params = { path: "src", recursive: false }
 
 		await tool.execute(params, mockTask, mockCallbacks)
 
-		// The mistake count should NOT be reset since the error path doesn't reset it
-		// Note: it may be reset before the error occurs since the validation passed
+		// Validation passes (path is present), so the tool resets the count to 0 before
+		// calling listFiles. listFiles then throws and is handled in the catch block,
+		// which does not touch the count again — so it stays at 0, not the original 2.
 		expect(mockCallbacks.handleError).toHaveBeenCalled()
+		expect(mockTask.consecutiveMistakeCount).toBe(0)
 	})
 
 	// ===== handlePartial tests =====
