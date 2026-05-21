@@ -72,6 +72,26 @@ describe("isPathOutsideWorkspace", () => {
 		expect(isPathOutsideWorkspace(path.join(linkDir, "deep.txt"))).toBe(true)
 	})
 
+	it("fails closed when symlink resolution throws a non-ENOENT error such as EACCES (#169)", () => {
+		const restricted = path.join(workspaceDir, "restricted.txt")
+		fs.writeFileSync(restricted, "x")
+
+		// Simulate realpath failing with EACCES (e.g. a symlink whose target has
+		// restricted permissions). The path lexically lives inside the workspace, but
+		// an unresolvable symlink must be treated as outside, not silently allowed.
+		const spy = vi.spyOn(fs.realpathSync, "native").mockImplementation(() => {
+			const err: NodeJS.ErrnoException = new Error("permission denied")
+			err.code = "EACCES"
+			throw err
+		})
+
+		try {
+			expect(isPathOutsideWorkspace(restricted)).toBe(true)
+		} finally {
+			spy.mockRestore()
+		}
+	})
+
 	it("returns true when there are no workspace folders", () => {
 		mockWorkspace.folders = []
 		expect(isPathOutsideWorkspace(path.join(workspaceDir, "file.ts"))).toBe(true)
