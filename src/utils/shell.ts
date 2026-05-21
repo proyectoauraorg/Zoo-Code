@@ -188,7 +188,13 @@ function normalizeShellPath(path: string | string[] | undefined): string | null 
 function getWindowsShellFromVSCode(): string | null {
 	const { defaultProfileName, profiles } = getWindowsTerminalConfig()
 	if (!defaultProfileName) {
-		return null
+		// No explicit Windows terminal profile is configured. VS Code's built-in
+		// default on modern Windows is PowerShell (not cmd.exe), and that is the
+		// shell the integrated terminal actually launches. Mirror it here so the
+		// system prompt advertises the real shell instead of falling through to
+		// COMSPEC (cmd.exe). Windows PowerShell is always present, so it is a safe
+		// allowlisted default. See issue #82.
+		return SHELL_PATHS.POWERSHELL_LEGACY
 	}
 
 	const profile = profiles[defaultProfileName]
