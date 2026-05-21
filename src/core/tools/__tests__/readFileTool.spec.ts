@@ -200,7 +200,7 @@ describe("ReadFileTool", () => {
 		// doesn't leak into subsequent tests. Scoped to console to avoid restoring
 		// the module-level mocks (e.g. ImageMemoryTracker) set up for the suite.
 		if (vi.isMockFunction(console.warn)) {
-			;(console.warn as ReturnType<typeof vi.spyOn>).mockRestore()
+			;(console.warn as unknown as ReturnType<typeof vi.spyOn>).mockRestore()
 		}
 	})
 
