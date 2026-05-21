@@ -94,6 +94,26 @@ describe("FireworksHandler", () => {
 		expect(model.info).toEqual(expect.objectContaining(fireworksModels[testModelId]))
 	})
 
+	it.each([
+		"accounts/fireworks/models/glm-5p1",
+		"accounts/fireworks/models/kimi-k2p6",
+		"accounts/fireworks/models/deepseek-v4-pro",
+	] as const satisfies readonly FireworksModelId[])("should expose newly added model %s", (modelId) => {
+		expect(fireworksModels[modelId]).toBeDefined()
+		const info = fireworksModels[modelId]
+		expect(info.maxTokens).toBeGreaterThan(0)
+		expect(info.contextWindow).toBeGreaterThan(0)
+		expect(info.inputPrice).toBeGreaterThanOrEqual(0)
+		expect(info.outputPrice).toBeGreaterThanOrEqual(0)
+		expect(info.description).toBeTruthy()
+
+		const handlerWithModel = new FireworksHandler({
+			apiModelId: modelId,
+			fireworksApiKey: "test-fireworks-api-key",
+		})
+		expect(handlerWithModel.getModel().id).toBe(modelId)
+	})
+
 	it("should return Kimi K2 Instruct model with correct configuration", () => {
 		const testModelId: FireworksModelId = "accounts/fireworks/models/kimi-k2-instruct"
 		const handlerWithModel = new FireworksHandler({
