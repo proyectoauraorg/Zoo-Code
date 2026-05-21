@@ -438,6 +438,9 @@ describe("AskFollowupQuestionTool", () => {
 		await tool.execute(params, mockTask, mockCallbacks)
 
 		expect(mockTask.say).toHaveBeenCalledWith("user_feedback", "", [])
+		// pushToolResult should receive normalized empty string, NOT "undefined"
+		const toolResultArg = (mockCallbacks.pushToolResult as any).mock.calls[0][0]
+		expect(toolResultArg).not.toContain("undefined")
 		expect(mockCallbacks.pushToolResult).toHaveBeenCalledWith(
 			formatResponse.toolResult("<user_message>\n\n</user_message>", []),
 		)
@@ -447,55 +450,61 @@ describe("AskFollowupQuestionTool", () => {
 		expect(askFollowupQuestionTool).toBeInstanceOf(AskFollowupQuestionTool)
 		expect(askFollowupQuestionTool.name).toBe("ask_followup_question")
 	})
-})
 
-// ===== NativeToolCallParser integration tests for ask_followup_question =====
+	// ===== NativeToolCallParser integration tests for ask_followup_question =====
 
-describe("NativeToolCallParser.createPartialToolUse for ask_followup_question", () => {
-	beforeEach(() => {
-		NativeToolCallParser.clearAllStreamingToolCalls()
-		NativeToolCallParser.clearRawChunkState()
-	})
+	describe("NativeToolCallParser.createPartialToolUse for ask_followup_question", () => {
+		beforeEach(() => {
+			NativeToolCallParser.clearAllStreamingToolCalls()
+			NativeToolCallParser.clearRawChunkState()
+		})
 
-	it("should build nativeArgs with question and follow_up during streaming", () => {
-		NativeToolCallParser.startStreamingToolCall("call_123", "ask_followup_question")
+		it("should build nativeArgs with question and follow_up during streaming", () => {
+			// Start a streaming tool call
+			NativeToolCallParser.startStreamingToolCall("call_123", "ask_followup_question")
 
-		const chunk1 = '{"question":"What would you like?","follow_up":[{"text":"Option 1","mode":"code"}'
-		const result1 = NativeToolCallParser.processStreamingChunk("call_123", chunk1)
+			// Simulate streaming JSON chunks
+			const chunk1 = '{"question":"What would you like?","follow_up":[{"text":"Option 1","mode":"code"}'
+			const result1 = NativeToolCallParser.processStreamingChunk("call_123", chunk1)
 
-		expect(result1).not.toBeNull()
-		expect(result1?.name).toBe("ask_followup_question")
-		expect(result1?.params.question).toBe("What would you like?")
-		expect(result1?.nativeArgs).toBeDefined()
-		const nativeArgs = result1?.nativeArgs as {
-			question: string
-			follow_up?: Array<{ text: string; mode?: string }>
-		}
-		expect(nativeArgs?.question).toBe("What would you like?")
-		expect(nativeArgs?.follow_up).toBeDefined()
-	})
+			expect(result1).not.toBeNull()
+			expect(result1?.name).toBe("ask_followup_question")
+			expect(result1?.params.question).toBe("What would you like?")
+			expect(result1?.nativeArgs).toBeDefined()
+			// Use type assertion to access the specific fields
+			const nativeArgs = result1?.nativeArgs as {
+				question: string
+				follow_up?: Array<{ text: string; mode?: string }>
+			}
+			expect(nativeArgs?.question).toBe("What would you like?")
+			// partial-json should parse the incomplete array
+			expect(nativeArgs?.follow_up).toBeDefined()
+		})
 
-	it("should finalize with complete nativeArgs", () => {
-		NativeToolCallParser.startStreamingToolCall("call_456", "ask_followup_question")
+		it("should finalize with complete nativeArgs", () => {
+			NativeToolCallParser.startStreamingToolCall("call_456", "ask_followup_question")
 
-		const completeJson =
-			'{"question":"Choose an option","follow_up":[{"text":"Yes","mode":"code"},{"text":"No","mode":null}]}'
-		NativeToolCallParser.processStreamingChunk("call_456", completeJson)
+			// Add complete JSON
+			const completeJson =
+				'{"question":"Choose an option","follow_up":[{"text":"Yes","mode":"code"},{"text":"No","mode":null}]}'
+			NativeToolCallParser.processStreamingChunk("call_456", completeJson)
 
-		const result = NativeToolCallParser.finalizeStreamingToolCall("call_456")
+			const result = NativeToolCallParser.finalizeStreamingToolCall("call_456")
 
-		expect(result).not.toBeNull()
-		expect(result?.type).toBe("tool_use")
-		expect(result?.name).toBe("ask_followup_question")
-		expect(result?.partial).toBe(false)
-		if (result?.type === "tool_use") {
-			expect(result.nativeArgs).toEqual({
-				question: "Choose an option",
-				follow_up: [
-					{ text: "Yes", mode: "code" },
-					{ text: "No", mode: null },
-				],
-			})
-		}
+			expect(result).not.toBeNull()
+			expect(result?.type).toBe("tool_use")
+			expect(result?.name).toBe("ask_followup_question")
+			expect(result?.partial).toBe(false)
+			// Type guard: regular tools have type 'tool_use', MCP tools have type 'mcp_tool_use'
+			if (result?.type === "tool_use") {
+				expect(result.nativeArgs).toEqual({
+					question: "Choose an option",
+					follow_up: [
+						{ text: "Yes", mode: "code" },
+						{ text: "No", mode: null },
+					],
+				})
+			}
+		})
 	})
 })
