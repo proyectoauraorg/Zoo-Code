@@ -195,6 +195,15 @@ describe("ReadFileTool", () => {
 		})
 	})
 
+	afterEach(() => {
+		// Restore the console.warn spy that some tests install via vi.spyOn so it
+		// doesn't leak into subsequent tests. Scoped to console to avoid restoring
+		// the module-level mocks (e.g. ImageMemoryTracker) set up for the suite.
+		if (vi.isMockFunction(console.warn)) {
+			;(console.warn as ReturnType<typeof vi.spyOn>).mockRestore()
+		}
+	})
+
 	describe("input validation", () => {
 		it("should return error when path is missing", async () => {
 			const mockTask = createMockTask()
