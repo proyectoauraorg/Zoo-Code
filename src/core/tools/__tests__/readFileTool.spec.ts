@@ -768,6 +768,23 @@ describe("ReadFileTool", () => {
 			mockedFsReadFile.mockResolvedValueOnce(Buffer.from("file1 content"))
 			mockedFsReadFile.mockResolvedValueOnce(Buffer.from("file2 content"))
 
+			// Override readWithSlice to return content that reflects the actual file data
+			mockedReadWithSlice
+				.mockReturnValueOnce({
+					content: "1 | file1 content",
+					returnedLines: 1,
+					totalLines: 1,
+					wasTruncated: false,
+					includedRanges: [[1, 1]],
+				})
+				.mockReturnValueOnce({
+					content: "1 | file2 content",
+					returnedLines: 1,
+					totalLines: 1,
+					wasTruncated: false,
+					includedRanges: [[1, 1]],
+				})
+
 			vi.spyOn(console, "warn").mockImplementation(() => {})
 
 			await readFileTool.execute(
@@ -823,7 +840,8 @@ describe("ReadFileTool", () => {
 			const callbacks = createMockCallbacks()
 
 			mockTask.ask.mockResolvedValue({ response: "yesButtonClicked", text: undefined, images: undefined })
-			mockedFsReadFile.mockResolvedValue(Buffer.from("line1\nline2\nline3\nline4\nline5"))
+			// fs.readFile with "utf8" encoding returns a string, not a Buffer
+			mockedFsReadFile.mockResolvedValue("line1\nline2\nline3\nline4\nline5" as any)
 			vi.spyOn(console, "warn").mockImplementation(() => {})
 
 			await readFileTool.execute(
