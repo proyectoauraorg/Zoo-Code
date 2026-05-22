@@ -157,10 +157,14 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 				// Some OpenAI-Compatible models (e.g. claude-opus-4-7) reject `temperature` as
 				// deprecated/unsupported. Honor the model's `supportsTemperature` flag and omit it
 				// when explicitly set to false (undefined still sends temperature, preserving behavior).
-				...(modelInfo.supportsTemperature !== false && {
-					temperature:
-						this.options.modelTemperature ?? (deepseekReasoner ? DEEP_SEEK_DEFAULT_TEMPERATURE : 0),
-				}),
+				// Include `temperature` only when the model supports it (#233) AND either the user set a
+				// custom temperature or the model needs a specific default (deepseek-reasoner). When "use
+				// custom temperature" is off and the model has no required default, omit it so the server's
+				// own default applies instead of forcing 0 (#242 — option A).
+				...(modelInfo.supportsTemperature !== false &&
+					(this.options.modelTemperature != null || deepseekReasoner) && {
+						temperature: this.options.modelTemperature ?? DEEP_SEEK_DEFAULT_TEMPERATURE,
+					}),
 				messages: convertedMessages,
 				stream: true as const,
 				...(isGrokXAI ? {} : { stream_options: { include_usage: true } }),
