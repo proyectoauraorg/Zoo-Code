@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Izinkan symlink yang mengarah ke luar workspace",
+			"description": "Saat diaktifkan, symlink yang berada di dalam workspace tetapi mengarah ke luar diperlakukan berdasarkan lokasinya di dalam workspace alih-alih ditandai sebagai luar. Nonaktif secara default, sehingga target symlink diselesaikan dan akses di luar workspace ditandai."
+		},
 		"description": "Kontrol informasi apa yang disertakan dalam context window AI, mempengaruhi penggunaan token dan kualitas respons",
 		"autoCondenseContextPercent": {
 			"label": "Ambang batas untuk memicu kondensasi konteks cerdas",

@@ -595,6 +595,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "允許指向工作區外部的符號連結",
+			"description": "啟用後，位於工作區內但指向外部的符號連結將按其在工作區內的位置處理，而不是被標記為外部。預設關閉，因此符號連結目標會被解析，工作區外的存取會被標記。"
+		},
 		"description": "控制 AI 上下文視窗中要包含哪些資訊，會影響 Token 用量和回應品質",
 		"autoCondenseContextPercent": {
 			"label": "觸發智慧上下文壓縮的閾值",

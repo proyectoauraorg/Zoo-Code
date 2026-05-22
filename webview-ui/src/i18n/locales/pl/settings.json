@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Zezwalaj na dowiązania symboliczne wskazujące poza obszar roboczy",
+			"description": "Po włączeniu dowiązanie symboliczne znajdujące się wewnątrz obszaru roboczego, ale wskazujące na zewnątrz, jest traktowane według jego lokalizacji w obszarze roboczym zamiast być oznaczane jako zewnętrzne. Wyłączone domyślnie, dlatego cele dowiązań symbolicznych są rozwiązywane, a dostęp poza obszarem roboczym jest oznaczany."
+		},
 		"description": "Kontroluj, jakie informacje są zawarte w oknie kontekstu AI, wpływając na zużycie token i jakość odpowiedzi",
 		"autoCondenseContextPercent": {
 			"label": "Próg wyzwalający inteligentną kondensację kontekstu",

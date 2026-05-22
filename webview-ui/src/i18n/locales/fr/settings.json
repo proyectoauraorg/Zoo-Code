@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Autoriser les liens symboliques pointant en dehors de l'espace de travail",
+			"description": "Lorsque cette option est activée, un lien symbolique situé dans l'espace de travail mais pointant vers l'extérieur est traité en fonction de son emplacement dans l'espace de travail au lieu d'être signalé comme extérieur. Désactivé par défaut, les cibles des liens symboliques sont résolues et l'accès en dehors de l'espace de travail est signalé."
+		},
 		"description": "Contrôlez quelles informations sont incluses dans la fenêtre de contexte de l'IA, affectant l'utilisation de token et la qualité des réponses",
 		"autoCondenseContextPercent": {
 			"label": "Seuil de déclenchement de la condensation intelligente du contexte",

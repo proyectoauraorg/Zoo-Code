@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Symlinks erlauben, die außerhalb des Arbeitsbereichs zeigen",
+			"description": "Wenn aktiviert, wird ein Symlink, der sich innerhalb des Arbeitsbereichs befindet, aber nach außen verweist, anhand seines Speicherorts innerhalb des Arbeitsbereichs behandelt, anstatt als außerhalb markiert zu werden. Standardmäßig deaktiviert, sodass Symlink-Ziele aufgelöst werden und der Zugriff außerhalb des Arbeitsbereichs markiert wird."
+		},
 		"description": "Steuern Sie, welche Informationen im KI-Kontextfenster enthalten sind, was den Token-Verbrauch und die Antwortqualität beeinflusst",
 		"autoCondenseContextPercent": {
 			"label": "Schwellenwert für intelligente Kontextkomprimierung",

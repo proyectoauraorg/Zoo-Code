@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Çalışma alanının dışını işaret eden sembolik bağlantılara izin ver",
+			"description": "Etkinleştirildiğinde, çalışma alanında bulunan ancak dışını işaret eden bir sembolik bağlantı, dışarıda olarak işaretlenmek yerine çalışma alanındaki konumuna göre işlenir. Varsayılan olarak kapalıdır, bu nedenle sembolik bağlantı hedefleri çözülür ve çalışma alanı dışına erişim işaretlenir."
+		},
 		"description": "Yapay zekanın bağlam penceresine hangi bilgilerin dahil edileceğini kontrol edin, token kullanımını ve yanıt kalitesini etkiler",
 		"autoCondenseContextPercent": {
 			"label": "Akıllı bağlam sıkıştırmayı tetikleyecek eşik",

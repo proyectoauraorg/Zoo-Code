@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Permitir enlaces simbólicos que apunten fuera del espacio de trabajo",
+			"description": "Cuando está habilitado, un enlace simbólico que se encuentra dentro del espacio de trabajo pero apunta fuera se trata según su ubicación dentro del espacio de trabajo en lugar de marcarse como externo. Desactivado de forma predeterminada, por lo que los destinos de los enlaces simbólicos se resuelven y el acceso fuera del espacio de trabajo se marca."
+		},
 		"description": "Controle qué información se incluye en la ventana de contexto de la IA, afectando el uso de token y la calidad de respuesta",
 		"autoCondenseContextPercent": {
 			"label": "Umbral para activar la condensación inteligente de contexto",

@@ -648,6 +648,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Allow symlinks pointing outside the workspace",
+			"description": "When enabled, a symlink that lives inside the workspace but points outside it is treated by its location inside the workspace instead of being flagged as outside. Off by default, so symlink targets are resolved and out-of-workspace access is flagged."
+		},
 		"description": "Control what information is included in the AI's context window, affecting token usage and response quality",
 		"autoCondenseContextPercent": {
 			"label": "Threshold to trigger intelligent context condensing",

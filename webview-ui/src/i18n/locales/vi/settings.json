@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Cho phép symlink trỏ ra ngoài vùng làm việc",
+			"description": "Khi được bật, một symlink nằm trong vùng làm việc nhưng trỏ ra ngoài sẽ được xử lý theo vị trí bên trong vùng làm việc thay vì bị đánh dấu là bên ngoài. Tắt theo mặc định, do đó đích symlink được giải quyết và truy cập ngoài vùng làm việc được đánh dấu."
+		},
 		"description": "Kiểm soát thông tin nào được đưa vào cửa sổ ngữ cảnh của AI, ảnh hưởng đến việc sử dụng token và chất lượng phản hồi",
 		"autoCondenseContextPercent": {
 			"label": "Ngưỡng kích hoạt nén ngữ cảnh thông minh",

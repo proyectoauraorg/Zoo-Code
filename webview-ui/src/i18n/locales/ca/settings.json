@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Permetre enllaços simbòlics que apunten fora de l'espai de treball",
+			"description": "Quan està activat, un enllaç simbòlic que es troba dins de l'espai de treball però en punta fora es tracta segons la seva ubicació dins de l'espai de treball en lloc de marcar-lo com a exterior. Desactivat per defecte, de manera que les destinacions dels enllaços simbòlics es resolen i l'accés fora de l'espai de treball es marca."
+		},
 		"description": "Controleu quina informació s'inclou a la finestra de context de la IA, afectant l'ús de token i la qualitat de resposta",
 		"autoCondenseContextPercent": {
 			"label": "Llindar per activar la condensació intel·ligent de context",

@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "Symlinks toestaan die buiten de werkruimte wijzen",
+			"description": "Wanneer ingeschakeld, wordt een symlink die zich in de werkruimte bevindt maar naar buiten wijst behandeld op basis van de locatie in de werkruimte in plaats van als buiten de werkruimte te worden gemarkeerd. Standaard uitgeschakeld, zodat symlinkdoelen worden opgelost en toegang buiten de werkruimte wordt gemarkeerd."
+		},
 		"description": "Bepaal welke informatie wordt opgenomen in het contextvenster van de AI, wat invloed heeft op tokengebruik en antwoordkwaliteit",
 		"autoCondenseContextPercent": {
 			"label": "Drempelwaarde om intelligente contextcompressie te activeren",

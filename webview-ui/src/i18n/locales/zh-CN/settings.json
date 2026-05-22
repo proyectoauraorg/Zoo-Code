@@ -585,6 +585,10 @@
 		}
 	},
 	"contextManagement": {
+		"allowSymlinksOutsideWorkspace": {
+			"label": "允许指向工作区外部的符号链接",
+			"description": "启用后，位于工作区内但指向外部的符号链接将按其在工作区内的位置处理，而不是被标记为外部。默认关闭，因此符号链接目标会被解析，工作区外的访问会被标记。"
+		},
 		"description": "管理AI上下文信息（影响token用量和回答质量）",
 		"autoCondenseContextPercent": {
 			"label": "触发智能上下文压缩的阈值",

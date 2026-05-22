@@ -33,6 +33,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 	maxWorkspaceFiles: number
 	showRooIgnoredFiles?: boolean
 	enableSubfolderRules?: boolean
+	allowSymlinksOutsideWorkspace?: boolean
 	maxImageFileSize?: number
 	maxTotalImageSize?: number
 	profileThresholds?: Record<string, number>
@@ -51,6 +52,7 @@ type ContextManagementSettingsProps = HTMLAttributes<HTMLDivElement> & {
 		| "maxWorkspaceFiles"
 		| "showRooIgnoredFiles"
 		| "enableSubfolderRules"
+		| "allowSymlinksOutsideWorkspace"
 		| "maxImageFileSize"
 		| "maxTotalImageSize"
 		| "profileThresholds"
@@ -71,6 +73,7 @@ export const ContextManagementSettings = ({
 	maxWorkspaceFiles,
 	showRooIgnoredFiles,
 	enableSubfolderRules,
+	allowSymlinksOutsideWorkspace,
 	setCachedStateField,
 	maxImageFileSize,
 	maxTotalImageSize,
@@ -243,6 +246,23 @@ export const ContextManagementSettings = ({
 					</VSCodeCheckbox>
 					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
 						{t("settings:contextManagement.enableSubfolderRules.description")}
+					</div>
+				</SearchableSetting>
+
+				<SearchableSetting
+					settingId="context-allow-symlinks-outside-workspace"
+					section="contextManagement"
+					label={t("settings:contextManagement.allowSymlinksOutsideWorkspace.label")}>
+					<VSCodeCheckbox
+						checked={allowSymlinksOutsideWorkspace}
+						onChange={(e: any) => setCachedStateField("allowSymlinksOutsideWorkspace", e.target.checked)}
+						data-testid="allow-symlinks-outside-workspace-checkbox">
+						<label className="block font-medium mb-1">
+							{t("settings:contextManagement.allowSymlinksOutsideWorkspace.label")}
+						</label>
+					</VSCodeCheckbox>
+					<div className="text-vscode-descriptionForeground text-sm mt-1 mb-3">
+						{t("settings:contextManagement.allowSymlinksOutsideWorkspace.description")}
 					</div>
 				</SearchableSetting>
 
