@@ -54,19 +54,28 @@ function realPathOrNearest(target: string): string {
  * @param filePath The file path to check
  * @returns true if the path is outside all workspace folders, false otherwise
  */
-export function isPathOutsideWorkspace(filePath: string): boolean {
+export function isPathOutsideWorkspace(
+	filePath: string,
+	options: { allowSymlinksOutsideWorkspace?: boolean } = {},
+): boolean {
 	// If there are no workspace folders, consider everything outside workspace for safety
 	if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
 		return true
 	}
 
-	// Resolve symlinks (not just "." / "..") so a symlink that lives inside the
-	// workspace but points outside it is correctly treated as outside. Without
-	// this, the out-of-workspace read protection was trivially bypassed by
-	// symlinking to a file outside the workspace. See issue #169.
+	// By default we resolve symlinks (not just "." / "..") so a symlink that lives
+	// inside the workspace but points outside it is correctly treated as outside.
+	// Without this, the out-of-workspace read protection was trivially bypassed by
+	// symlinking to a file outside the workspace (#169).
+	//
+	// When the user opts in via `allowSymlinksOutsideWorkspace`, we compare lexical
+	// paths instead (path.resolve, no symlink resolution) — restoring the pre-#169
+	// behavior for those who deliberately rely on symlinks pointing outside.
+	const resolvePath = options.allowSymlinksOutsideWorkspace ? (p: string) => path.resolve(p) : realPathOrNearest
+
 	let absolutePath: string
 	try {
-		absolutePath = realPathOrNearest(filePath)
+		absolutePath = resolvePath(filePath)
 	} catch {
 		// Could not safely resolve the target (e.g. EACCES on a symlink). Fail closed:
 		// treat it as outside the workspace rather than risk a false "inside".
@@ -78,7 +87,7 @@ export function isPathOutsideWorkspace(filePath: string): boolean {
 		// Resolve the workspace folder too, in case it is itself reached via a symlink.
 		let folderPath: string
 		try {
-			folderPath = realPathOrNearest(folder.uri.fsPath)
+			folderPath = resolvePath(folder.uri.fsPath)
 		} catch {
 			// Can't resolve this folder safely; it can't be used to prove containment.
 			return false

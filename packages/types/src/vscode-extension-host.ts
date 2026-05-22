@@ -252,6 +252,7 @@ export type ExtensionState = Pick<
 	| "alwaysAllowReadOnlyOutsideWorkspace"
 	| "alwaysAllowWrite"
 	| "alwaysAllowWriteOutsideWorkspace"
+	| "allowSymlinksOutsideWorkspace"
 	| "alwaysAllowWriteProtected"
 	| "alwaysAllowMcp"
 	| "alwaysAllowModeSwitch"

@@ -2,6 +2,7 @@ import type { ToolName } from "@roo-code/types"
 
 import { Task } from "../task/Task"
 import type { ToolUse, HandleError, PushToolResult, AskApproval, NativeToolArgs } from "../../shared/tools"
+import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 
 /**
  * Callbacks passed to tool execution
@@ -96,6 +97,18 @@ export abstract class BaseTool<TName extends ToolName> {
 	 */
 	resetPartialState(): void {
 		this.lastSeenPartialPath = undefined
+	}
+
+	/**
+	 * Resolve whether an absolute path is outside the workspace, honoring the
+	 * `allowSymlinksOutsideWorkspace` setting (#169 / #241). When that setting is enabled,
+	 * a symlink resolving outside the workspace is treated by its lexical path rather than
+	 * being blocked; otherwise symlink targets are resolved and the check fails closed.
+	 */
+	protected async resolveIsOutsideWorkspace(task: Task, absolutePath: string): Promise<boolean> {
+		const allowSymlinksOutsideWorkspace =
+			(await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ?? false
+		return isPathOutsideWorkspace(absolutePath, { allowSymlinksOutsideWorkspace })
 	}
 
 	/**

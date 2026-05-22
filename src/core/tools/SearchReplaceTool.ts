@@ -4,7 +4,6 @@ import path from "path"
 import { type ClineSayTool, DEFAULT_WRITE_DELAY_MS } from "@roo-code/types"
 
 import { getReadablePath } from "../../utils/path"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
@@ -170,7 +169,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 
 			const sanitizedDiff = sanitizeUnifiedDiff(diff)
 			const diffStats = computeDiffStats(sanitizedDiff) || undefined
-			const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)
+			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, absolutePath)
 
 			const sharedMessageProps: ClineSayTool = {
 				tool: "appliedDiff",
@@ -262,7 +261,7 @@ export class SearchReplaceTool extends BaseTool<"search_replace"> {
 		}
 
 		const absolutePath = path.resolve(task.cwd, relPath)
-		const isOutsideWorkspace = isPathOutsideWorkspace(absolutePath)
+		const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, absolutePath)
 
 		const sharedMessageProps: ClineSayTool = {
 			tool: "appliedDiff",

@@ -72,6 +72,19 @@ describe("isPathOutsideWorkspace", () => {
 		expect(isPathOutsideWorkspace(path.join(linkDir, "deep.txt"))).toBe(true)
 	})
 
+	it("allows a symlink pointing outside when allowSymlinksOutsideWorkspace is enabled (#246)", () => {
+		const secret = path.join(outsideDir, "secret.txt")
+		fs.writeFileSync(secret, "secret")
+		const link = path.join(workspaceDir, "link-to-secret.txt")
+		fs.symlinkSync(secret, link)
+
+		// Default (secure, #169): the link resolves outside the workspace.
+		expect(isPathOutsideWorkspace(link)).toBe(true)
+		// Opt-in (#246): symlinks are not resolved, so the link's lexical location
+		// (inside the workspace) wins and it is treated as inside.
+		expect(isPathOutsideWorkspace(link, { allowSymlinksOutsideWorkspace: true })).toBe(false)
+	})
+
 	it("fails closed when symlink resolution throws a non-ENOENT error such as EACCES (#169)", () => {
 		const restricted = path.join(workspaceDir, "restricted.txt")
 		fs.writeFileSync(restricted, "x")
