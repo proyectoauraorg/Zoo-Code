@@ -259,6 +259,27 @@ describe("ReadFileTool", () => {
 				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: true }),
 			)
 		})
+
+		it("resolves the boundary through symlink resolution in handlePartial", async () => {
+			vi.mocked(isPathOutsideWorkspace).mockReturnValue(true)
+			const mockTask = createMockTask({ allowSymlinksOutsideWorkspace: false })
+
+			const block = {
+				type: "tool_use",
+				name: "read_file",
+				params: {},
+				partial: true,
+				nativeArgs: { path: "link-to-outside.txt" },
+			} as any
+
+			await readFileTool.handlePartial(mockTask as any, block)
+
+			const toolAsk = (mockTask.ask.mock.calls as any[]).find(([type]: [string]) => type === "tool")
+			expect(toolAsk).toBeDefined()
+			expect(JSON.parse(toolAsk![1] as string)).toEqual(
+				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: true }),
+			)
+		})
 	})
 
 	describe("input validation", () => {

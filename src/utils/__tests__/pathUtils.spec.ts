@@ -105,6 +105,48 @@ describe("isPathOutsideWorkspace", () => {
 		}
 	})
 
+	it("falls back to the lexical path when no ancestor resolves up to the root (#169)", () => {
+		const inside = path.join(workspaceDir, "a", "b", "new-file.ts")
+
+		// Force realpath to report ENOENT for every segment, so the walk-up reaches the
+		// filesystem root without resolving anything and falls back to the lexical path.
+		// Both the target and the workspace folder resolve lexically, so containment holds.
+		const spy = vi.spyOn(fs.realpathSync, "native").mockImplementation(() => {
+			const err: NodeJS.ErrnoException = new Error("no entry")
+			err.code = "ENOENT"
+			throw err
+		})
+
+		try {
+			expect(isPathOutsideWorkspace(inside)).toBe(false)
+		} finally {
+			spy.mockRestore()
+		}
+	})
+
+	it("treats a path as outside when the workspace folder itself cannot be resolved (#169)", () => {
+		const inside = path.join(workspaceDir, "file.ts")
+		fs.writeFileSync(inside, "x")
+
+		// The target resolves fine, but realpath on the workspace folder throws EACCES.
+		// A folder that can't be resolved can't prove containment, so we fail closed.
+		const realNative = fs.realpathSync.native
+		const spy = vi.spyOn(fs.realpathSync, "native").mockImplementation(((p: string) => {
+			if (p === workspaceDir) {
+				const err: NodeJS.ErrnoException = new Error("permission denied")
+				err.code = "EACCES"
+				throw err
+			}
+			return realNative(p)
+		}) as typeof fs.realpathSync.native)
+
+		try {
+			expect(isPathOutsideWorkspace(inside)).toBe(true)
+		} finally {
+			spy.mockRestore()
+		}
+	})
+
 	it("returns true when there are no workspace folders", () => {
 		mockWorkspace.folders = []
 		expect(isPathOutsideWorkspace(path.join(workspaceDir, "file.ts"))).toBe(true)
