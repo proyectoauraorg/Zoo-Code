@@ -313,7 +313,12 @@ export class TerminalProcess extends BaseTerminalProcess {
 
 			const terminal = this.terminalRef.deref()
 
-			if (!terminal || !terminal.busy) {
+			// Stop if the terminal is gone, idle, or has already moved on to a different
+			// command. If the original command exits and the terminal is reused before this
+			// tick fires, `terminal.busy` can be true for the NEW command while
+			// `terminal.process` points at a different TerminalProcess — re-sending Ctrl+C
+			// then would interrupt an unrelated command, so we bail out.
+			if (!terminal || !terminal.busy || terminal.process !== this) {
 				return
 			}
 

@@ -196,6 +196,9 @@ describe("TerminalProcess", () => {
 
 		beforeEach(() => {
 			vi.useFakeTimers()
+			// abort() runs against the terminal's *current* process; mirror that wiring so
+			// the reuse guard (terminal.process === this) lets the retry loop proceed.
+			mockTerminalInfo.process = terminalProcess
 		})
 
 		afterEach(() => {
@@ -242,8 +245,29 @@ describe("TerminalProcess", () => {
 			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
 			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
 
-			// Process exits before the next tick.
-			mockTerminalInfo.busy = false
+			// Process exits before the next tick — drive the real completion lifecycle
+			// (shellExecutionComplete clears busy and releases terminal.process) rather than
+			// mutating busy directly, so the test exercises the production wiring.
+			mockTerminalInfo.shellExecutionComplete({ exitCode: 0 })
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * MAX_ATTEMPTS)
+
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
+		})
+
+		it("stops re-sending Ctrl+C if the terminal is reused for a different process (#266)", async () => {
+			mockTerminalInfo.busy = true
+
+			terminalProcess.abort()
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+
+			// First retry tick: still busy, re-send.
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
+
+			// The original command exits and the terminal is reused for a NEW command before
+			// the next tick: terminal stays busy, but terminal.process now points at a
+			// different process. The retry must not interrupt that unrelated command.
+			mockTerminalInfo.process = new TestTerminalProcess(mockTerminalInfo)
 			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * MAX_ATTEMPTS)
 
 			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
