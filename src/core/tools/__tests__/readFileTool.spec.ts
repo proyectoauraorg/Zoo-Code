@@ -225,7 +225,7 @@ describe("ReadFileTool", () => {
 			)
 
 			// The approval payload must reflect the boundary decision.
-			const toolAsk = mockTask.ask.mock.calls.find(([type]: [string]) => type === "tool")
+			const toolAsk = (mockTask.ask.mock.calls as any[]).find(([type]: [string]) => type === "tool")
 			expect(toolAsk).toBeDefined()
 			expect(JSON.parse(toolAsk![1] as string)).toEqual(
 				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: false }),
@@ -253,7 +253,7 @@ describe("ReadFileTool", () => {
 
 			await readFileTool.execute({ path: "link-to-outside.txt" }, mockTask as any, callbacks)
 
-			const toolAsk = mockTask.ask.mock.calls.find(([type]: [string]) => type === "tool")
+			const toolAsk = (mockTask.ask.mock.calls as any[]).find(([type]: [string]) => type === "tool")
 			expect(toolAsk).toBeDefined()
 			expect(JSON.parse(toolAsk![1] as string)).toEqual(
 				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: true }),
