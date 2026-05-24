@@ -450,9 +450,9 @@ describe("ListFilesTool", () => {
 		expect(getReadablePath).toHaveBeenCalledWith(TEST_WORKSPACE, "")
 	})
 
-	it("should handle partial message with recursive as string 'true'", async () => {
+	it("should handle partial message with recursive as string 'TRUE' (case-insensitive)", async () => {
 		vi.mocked(getReadablePath).mockReturnValue("src")
-		const block = createBlock({ path: "src", recursive: "true" as any }, true)
+		const block = createBlock({ path: "src", recursive: "TRUE" as any }, true)
 
 		await tool.handlePartial(mockTask, block)
 
