@@ -714,3 +714,56 @@ describe("SettingsView - Duplicate Commands", () => {
 		)
 	})
 })
+
+describe("SettingsView - Symlink Workspace Boundary Setting (#169 / #241)", () => {
+	beforeEach(() => {
+		vi.clearAllMocks()
+	})
+
+	it("renders the allow-symlinks-outside-workspace checkbox unchecked by default", () => {
+		const { activateTab, getSettingsContent } = renderSettingsView()
+
+		activateTab("contextManagement")
+
+		const content = getSettingsContent()
+		const checkbox = within(content).getByTestId("allow-symlinks-outside-workspace-checkbox")
+		expect(checkbox).not.toBeChecked()
+	})
+
+	it("does not flag unsaved changes on automatic initialization of the setting", () => {
+		const { activateTab } = renderSettingsView()
+
+		// Automatic hydration/initialization happened during render; no user edit yet.
+		activateTab("contextManagement")
+
+		// Save button stays disabled because nothing was actually edited by the user.
+		const saveButton = screen.getByTestId("save-button") as HTMLButtonElement
+		expect(saveButton.disabled).toBe(true)
+	})
+
+	it("includes allowSymlinksOutsideWorkspace in the save payload after a real user edit", () => {
+		const { activateTab, getSettingsContent } = renderSettingsView()
+
+		activateTab("contextManagement")
+
+		const content = getSettingsContent()
+		const checkbox = within(content).getByTestId("allow-symlinks-outside-workspace-checkbox")
+
+		// Real user edit: opt in to allowing symlinks outside the workspace.
+		fireEvent.click(checkbox)
+		expect(checkbox).toBeChecked()
+
+		const saveButton = screen.getByTestId("save-button") as HTMLButtonElement
+		expect(saveButton.disabled).toBe(false)
+		fireEvent.click(saveButton)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					allowSymlinksOutsideWorkspace: true,
+				}),
+			}),
+		)
+	})
+})

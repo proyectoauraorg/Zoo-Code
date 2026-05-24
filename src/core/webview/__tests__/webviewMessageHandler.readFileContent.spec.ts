@@ -52,6 +52,8 @@ vi.mock("../../../utils/pathUtils", () => ({
 	}),
 }))
 
+import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
+
 vi.mock("../../mentions/resolveImageMentions", () => ({
 	resolveImageMentions: vi.fn(async ({ text, images }: { text: string; images?: string[] }) => ({
 		text,
@@ -97,6 +99,7 @@ describe("webviewMessageHandler - readFileContent path traversal prevention", ()
 		vi.clearAllMocks()
 		vi.mocked(fs.readFile).mockResolvedValue("file content here")
 		vi.mocked(mockProvider.getCurrentTask).mockReturnValue({ cwd: MOCK_CWD } as any)
+		vi.mocked(mockProvider.getState).mockResolvedValue({ allowSymlinksOutsideWorkspace: false } as any)
 	})
 
 	it("allows reading a file within the workspace using a relative path", async () => {
@@ -205,6 +208,34 @@ describe("webviewMessageHandler - readFileContent path traversal prevention", ()
 					content: "file content here",
 				}),
 			}),
+		)
+	})
+
+	it("forwards the allowSymlinksOutsideWorkspace setting to the boundary check (default false)", async () => {
+		vi.mocked(mockProvider.getState).mockResolvedValue({ allowSymlinksOutsideWorkspace: false } as any)
+
+		await webviewMessageHandler(mockProvider, {
+			type: "readFileContent",
+			text: "src/index.ts",
+		})
+
+		expect(isPathOutsideWorkspace).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ allowSymlinksOutsideWorkspace: false }),
+		)
+	})
+
+	it("passes allowSymlinksOutsideWorkspace=true through when the user opted in", async () => {
+		vi.mocked(mockProvider.getState).mockResolvedValue({ allowSymlinksOutsideWorkspace: true } as any)
+
+		await webviewMessageHandler(mockProvider, {
+			type: "readFileContent",
+			text: "src/index.ts",
+		})
+
+		expect(isPathOutsideWorkspace).toHaveBeenCalledWith(
+			expect.any(String),
+			expect.objectContaining({ allowSymlinksOutsideWorkspace: true }),
 		)
 	})
 })

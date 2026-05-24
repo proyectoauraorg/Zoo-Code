@@ -150,6 +150,46 @@ describe("ContextManagementSettings", () => {
 		})
 	})
 
+	it("renders the allow-symlinks-outside-workspace checkbox", () => {
+		render(<ContextManagementSettings {...defaultProps} />)
+
+		expect(screen.getByTestId("allow-symlinks-outside-workspace-checkbox")).toBeInTheDocument()
+	})
+
+	it("reflects allowSymlinksOutsideWorkspace=true as checked", () => {
+		render(<ContextManagementSettings {...defaultProps} allowSymlinksOutsideWorkspace={true} />)
+
+		const checkbox = screen.getByTestId("allow-symlinks-outside-workspace-checkbox").querySelector("input")!
+		expect(checkbox).toBeChecked()
+	})
+
+	it("defaults allowSymlinksOutsideWorkspace to unchecked when undefined (automatic init)", () => {
+		render(<ContextManagementSettings {...defaultProps} />)
+
+		const checkbox = screen.getByTestId("allow-symlinks-outside-workspace-checkbox").querySelector("input")!
+		expect(checkbox).not.toBeChecked()
+	})
+
+	it("calls setCachedStateField with allowSymlinksOutsideWorkspace on a real user toggle", async () => {
+		const setCachedStateField = vi.fn()
+		render(
+			<ContextManagementSettings
+				{...defaultProps}
+				allowSymlinksOutsideWorkspace={false}
+				setCachedStateField={setCachedStateField}
+			/>,
+		)
+
+		const checkbox = screen
+			.getByTestId("allow-symlinks-outside-workspace-checkbox")
+			.querySelector("input")!
+		fireEvent.click(checkbox)
+
+		await waitFor(() => {
+			expect(setCachedStateField).toHaveBeenCalledWith("allowSymlinksOutsideWorkspace", true)
+		})
+	})
+
 	it("calls setCachedStateField when max diagnostic messages slider is changed", async () => {
 		const setCachedStateField = vi.fn()
 		render(<ContextManagementSettings {...defaultProps} setCachedStateField={setCachedStateField} />)

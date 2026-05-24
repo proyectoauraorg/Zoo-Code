@@ -26,6 +26,7 @@ import {
 } from "../helpers/imageHelpers"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../../integrations/misc/extract-text"
 import { readWithIndentation, readWithSlice } from "../../../integrations/misc/indentation-reader"
+import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -58,6 +59,12 @@ vi.mock("../../../integrations/misc/extract-text", () => ({
 vi.mock("../../../integrations/misc/indentation-reader", () => ({
 	readWithIndentation: vi.fn(),
 	readWithSlice: vi.fn(),
+}))
+
+// Spy on the workspace-boundary check so we can assert symlink resolution is
+// honored for reads (#169 / #241). Default to "inside workspace" (false).
+vi.mock("../../../utils/pathUtils", () => ({
+	isPathOutsideWorkspace: vi.fn(() => false),
 }))
 
 vi.mock("../helpers/imageHelpers", () => ({
@@ -132,10 +139,17 @@ interface MockTaskOptions {
 	rooIgnoreAllowed?: boolean
 	maxImageFileSize?: number
 	maxTotalImageSize?: number
+	allowSymlinksOutsideWorkspace?: boolean
 }
 
 function createMockTask(options: MockTaskOptions = {}) {
-	const { supportsImages = false, rooIgnoreAllowed = true, maxImageFileSize = 5, maxTotalImageSize = 20 } = options
+	const {
+		supportsImages = false,
+		rooIgnoreAllowed = true,
+		maxImageFileSize = 5,
+		maxTotalImageSize = 20,
+		allowSymlinksOutsideWorkspace = false,
+	} = options
 
 	return {
 		cwd: "/test/workspace",
@@ -162,6 +176,7 @@ function createMockTask(options: MockTaskOptions = {}) {
 				getState: vi.fn().mockResolvedValue({
 					maxImageFileSize,
 					maxTotalImageSize,
+					allowSymlinksOutsideWorkspace,
 				}),
 			}),
 		},
@@ -192,6 +207,57 @@ describe("ReadFileTool", () => {
 			totalLines: 1,
 			wasTruncated: false,
 			includedRanges: [[1, 1]],
+		})
+	})
+
+	describe("workspace boundary (symlink resolution, #169 / #241)", () => {
+		it("routes the read boundary check through symlink resolution with the setting disabled", async () => {
+			vi.mocked(isPathOutsideWorkspace).mockReturnValue(false)
+			const mockTask = createMockTask({ allowSymlinksOutsideWorkspace: false })
+			const callbacks = createMockCallbacks()
+
+			await readFileTool.execute({ path: "test.txt" }, mockTask as any, callbacks)
+
+			// The boundary check must be invoked with the resolved option, not bypassed.
+			expect(isPathOutsideWorkspace).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.objectContaining({ allowSymlinksOutsideWorkspace: false }),
+			)
+
+			// The approval payload must reflect the boundary decision.
+			const toolAsk = mockTask.ask.mock.calls.find(([type]: [string]) => type === "tool")
+			expect(toolAsk).toBeDefined()
+			expect(JSON.parse(toolAsk![1] as string)).toEqual(
+				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: false }),
+			)
+		})
+
+		it("forwards allowSymlinksOutsideWorkspace=true from provider state to the boundary check", async () => {
+			vi.mocked(isPathOutsideWorkspace).mockReturnValue(false)
+			const mockTask = createMockTask({ allowSymlinksOutsideWorkspace: true })
+			const callbacks = createMockCallbacks()
+
+			await readFileTool.execute({ path: "test.txt" }, mockTask as any, callbacks)
+
+			expect(isPathOutsideWorkspace).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.objectContaining({ allowSymlinksOutsideWorkspace: true }),
+			)
+		})
+
+		it("surfaces a symlink resolving outside the workspace as isOutsideWorkspace=true", async () => {
+			// Simulate a symlink whose real target is outside the workspace.
+			vi.mocked(isPathOutsideWorkspace).mockReturnValue(true)
+			const mockTask = createMockTask({ allowSymlinksOutsideWorkspace: false })
+			const callbacks = createMockCallbacks()
+
+			await readFileTool.execute({ path: "link-to-outside.txt" }, mockTask as any, callbacks)
+
+			const toolAsk = mockTask.ask.mock.calls.find(([type]: [string]) => type === "tool")
+			expect(toolAsk).toBeDefined()
+			expect(JSON.parse(toolAsk![1] as string)).toEqual(
+				expect.objectContaining({ tool: "readFile", isOutsideWorkspace: true }),
+			)
 		})
 	})
 

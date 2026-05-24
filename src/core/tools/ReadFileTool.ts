@@ -18,7 +18,6 @@ import { isLegacyReadFileParams, type ClineSayTool } from "@roo-code/types"
 import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { RecordSource } from "../context-tracking/FileContextTrackerTypes"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { getReadablePath } from "../../utils/path"
 import { extractTextFromFile, addLineNumbers, getSupportedBinaryFormats } from "../../integrations/misc/extract-text"
 import { readWithIndentation, readWithSlice } from "../../integrations/misc/indentation-reader"
@@ -433,17 +432,19 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 
 		if (filesToApprove.length > 1) {
 			// Batch approval
-			const batchFiles = filesToApprove.map((fileResult) => {
-				const relPath = fileResult.path
-				const fullPath = path.resolve(task.cwd, relPath)
-				const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
-				const readablePath = getReadablePath(task.cwd, relPath)
+			const batchFiles = await Promise.all(
+				filesToApprove.map(async (fileResult) => {
+					const relPath = fileResult.path
+					const fullPath = path.resolve(task.cwd, relPath)
+					const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
+					const readablePath = getReadablePath(task.cwd, relPath)
 
-				const lineSnippet = this.getLineSnippet(fileResult.entry!)
-				const key = `${readablePath}${lineSnippet ? ` (${lineSnippet})` : ""}`
+					const lineSnippet = this.getLineSnippet(fileResult.entry!)
+					const key = `${readablePath}${lineSnippet ? ` (${lineSnippet})` : ""}`
 
-				return { path: readablePath, lineSnippet, isOutsideWorkspace, key, content: fullPath }
-			})
+					return { path: readablePath, lineSnippet, isOutsideWorkspace, key, content: fullPath }
+				}),
+			)
 
 			const completeMessage = JSON.stringify({ tool: "readFile", batchFiles } satisfies ClineSayTool)
 			const { response, text, images } = await task.ask("tool", completeMessage, false)
@@ -501,7 +502,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			const fileResult = filesToApprove[0]
 			const relPath = fileResult.path
 			const fullPath = path.resolve(task.cwd, relPath)
-			const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
+			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
 			const lineSnippet = this.getLineSnippet(fileResult.entry!)
 
 			const startLine = this.getStartLine(fileResult.entry!)
@@ -651,7 +652,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 		const sharedMessageProps: ClineSayTool = {
 			tool: "readFile",
 			path: getReadablePath(task.cwd, filePath),
-			isOutsideWorkspace: filePath ? isPathOutsideWorkspace(fullPath) : false,
+			isOutsideWorkspace: filePath ? await this.resolveIsOutsideWorkspace(task, fullPath) : false,
 		}
 		const partialMessage = JSON.stringify({
 			...sharedMessageProps,
@@ -698,7 +699,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			}
 
 			// Request approval for single file
-			const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
+			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
 			let lineSnippet = ""
 			if (entry.lineRanges && entry.lineRanges.length > 0) {
 				const ranges = entry.lineRanges.map((range: LineRange) => `(lines ${range.start}-${range.end})`)

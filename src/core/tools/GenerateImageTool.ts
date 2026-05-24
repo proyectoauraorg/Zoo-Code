@@ -11,7 +11,6 @@ import { Task } from "../task/Task"
 import { formatResponse } from "../prompts/responses"
 import { fileExistsAtPath } from "../../utils/fs"
 import { getReadablePath } from "../../utils/path"
-import { isPathOutsideWorkspace } from "../../utils/pathUtils"
 import { EXPERIMENT_IDS, experiments } from "../../shared/experiments"
 import { OpenRouterHandler } from "../../api/providers/openrouter"
 import { BaseTool, ToolCallbacks } from "./BaseTool"
@@ -163,7 +162,7 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 		}
 
 		const fullPath = path.resolve(task.cwd, relPath)
-		const isOutsideWorkspace = isPathOutsideWorkspace(fullPath)
+		const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
 
 		const sharedMessageProps = {
 			tool: "generateImage" as const,
