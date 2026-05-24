@@ -1223,8 +1223,12 @@ export const webviewMessageHandler = async (
 				// Workspace-boundary validation: prevent path traversal attacks.
 				// Honor the `allowSymlinksOutsideWorkspace` setting (#169 / #241) so symlink
 				// targets are resolved (fail-closed) unless the user opted in.
-				const { allowSymlinksOutsideWorkspace } = await provider.getState()
-				if (isPathOutsideWorkspace(absPath, { allowSymlinksOutsideWorkspace })) {
+				const state = await provider.getState()
+				if (
+					isPathOutsideWorkspace(absPath, {
+						allowSymlinksOutsideWorkspace: state.allowSymlinksOutsideWorkspace,
+					})
+				) {
 					provider.postMessageToWebview({
 						type: "fileContent",
 						fileContent: { path: relPath, content: null, error: "Path is outside workspace" },

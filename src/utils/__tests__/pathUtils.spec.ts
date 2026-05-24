@@ -72,6 +72,20 @@ describe("isPathOutsideWorkspace", () => {
 		expect(isPathOutsideWorkspace(path.join(linkDir, "deep.txt"))).toBe(true)
 	})
 
+	it("treats a not-yet-existing file under a symlinked ancestor directory as OUTSIDE (#169)", () => {
+		// Intersection of the ENOENT walk-up and symlink resolution: linked-dir is a
+		// symlink to outsideDir and the target file doesn't exist yet. The walk-up resolves
+		// the symlinked ancestor and re-appends the basename, landing outside the workspace.
+		const linkDir = path.join(workspaceDir, "linked-dir")
+		fs.symlinkSync(outsideDir, linkDir)
+
+		expect(isPathOutsideWorkspace(path.join(linkDir, "new-file.ts"))).toBe(true)
+		// Opt-in (#246) keeps the lexical (inside) location and does not resolve the symlink.
+		expect(isPathOutsideWorkspace(path.join(linkDir, "new-file.ts"), { allowSymlinksOutsideWorkspace: true })).toBe(
+			false,
+		)
+	})
+
 	it("allows a symlink pointing outside when allowSymlinksOutsideWorkspace is enabled (#246)", () => {
 		const secret = path.join(outsideDir, "secret.txt")
 		fs.writeFileSync(secret, "secret")

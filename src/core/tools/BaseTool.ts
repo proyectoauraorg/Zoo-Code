@@ -104,11 +104,21 @@ export abstract class BaseTool<TName extends ToolName> {
 	 * `allowSymlinksOutsideWorkspace` setting (#169 / #241). When that setting is enabled,
 	 * a symlink resolving outside the workspace is treated by its lexical path rather than
 	 * being blocked; otherwise symlink targets are resolved and the check fails closed.
+	 *
+	 * Callers that already read provider state in the same execution path can pass
+	 * `allowSymlinksOutsideWorkspace` to avoid a redundant `getState()` call; when omitted
+	 * it is read here.
 	 */
-	protected async resolveIsOutsideWorkspace(task: Task, absolutePath: string): Promise<boolean> {
-		const allowSymlinksOutsideWorkspace =
-			(await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ?? false
-		return isPathOutsideWorkspace(absolutePath, { allowSymlinksOutsideWorkspace })
+	protected async resolveIsOutsideWorkspace(
+		task: Task,
+		absolutePath: string,
+		allowSymlinksOutsideWorkspace?: boolean,
+	): Promise<boolean> {
+		const allow =
+			allowSymlinksOutsideWorkspace ??
+			(await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ??
+			false
+		return isPathOutsideWorkspace(absolutePath, { allowSymlinksOutsideWorkspace: allow })
 	}
 
 	/**

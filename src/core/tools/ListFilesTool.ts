@@ -34,10 +34,18 @@ export class ListFilesTool extends BaseTool<"list_files"> {
 			task.consecutiveMistakeCount = 0
 
 			const absolutePath = path.resolve(task.cwd, relDirPath)
-			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, absolutePath)
+
+			// Read provider state once and reuse it for both the workspace-boundary check
+			// and the rooignore display preference.
+			const { allowSymlinksOutsideWorkspace = false, showRooIgnoredFiles = false } =
+				(await task.providerRef.deref()?.getState()) ?? {}
+			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(
+				task,
+				absolutePath,
+				allowSymlinksOutsideWorkspace,
+			)
 
 			const [files, didHitLimit] = await listFiles(absolutePath, recursive || false, 200)
-			const { showRooIgnoredFiles = false } = (await task.providerRef.deref()?.getState()) ?? {}
 
 			const result = formatResponse.formatFilesList(
 				absolutePath,
