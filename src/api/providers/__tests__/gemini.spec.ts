@@ -189,6 +189,8 @@ describe("GeminiHandler", () => {
 			// against the default model's rates.
 			expect(modelInfo.info.inputPrice).toBeUndefined()
 			expect(modelInfo.info.outputPrice).toBeUndefined()
+			expect(modelInfo.info.cacheReadsPrice).toBeUndefined()
+			expect(modelInfo.info.cacheWritesPrice).toBeUndefined()
 			expect(modelInfo.info.tiers).toBeUndefined()
 		})
 
