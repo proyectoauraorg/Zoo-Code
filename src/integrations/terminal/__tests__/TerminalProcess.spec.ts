@@ -187,8 +187,12 @@ describe("TerminalProcess", () => {
 	})
 
 	describe("abort", () => {
-		const RETRY_DELAY_MS = 500
-		const MAX_ATTEMPTS = 3
+		// These MIRROR the private production constants in TerminalProcess.ts
+		// (ABORT_RETRY_DELAY_MS and CTRL_C_SEND_LIMIT) — they can't be imported, so if
+		// those values are ever tuned, update them here too or the timing assertions
+		// below will keep passing while asserting the wrong cadence.
+		const RETRY_DELAY_MS = 500 // mirrors ABORT_RETRY_DELAY_MS
+		const MAX_ATTEMPTS = 3 // mirrors CTRL_C_SEND_LIMIT (total Ctrl+C sends)
 
 		beforeEach(() => {
 			vi.useFakeTimers()
@@ -261,6 +265,10 @@ describe("TerminalProcess", () => {
 			terminalProcess.abort()
 
 			// Two immediate Ctrl+C from the two abort() calls, but only one retry loop.
+			// This count of 2 relies on the `aborting` guard being checked AFTER the
+			// immediate sendText in abort(): the second call still fires its own Ctrl+C
+			// before the guard short-circuits the duplicate retry loop. If the guard ever
+			// moves above the send, this would drop to 1 immediate send (total 3, not 4).
 			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
 
 			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * (MAX_ATTEMPTS + 2))
