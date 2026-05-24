@@ -730,15 +730,22 @@ describe("SettingsView - Symlink Workspace Boundary Setting (#169 / #241)", () =
 		expect(checkbox).not.toBeChecked()
 	})
 
-	it("does not flag unsaved changes on automatic initialization of the setting", () => {
+	it("does not persist the setting on automatic initialization (no user edit)", () => {
 		const { activateTab } = renderSettingsView()
 
 		// Automatic hydration/initialization happened during render; no user edit yet.
 		activateTab("contextManagement")
 
-		// Save button stays disabled because nothing was actually edited by the user.
-		const saveButton = screen.getByTestId("save-button") as HTMLButtonElement
-		expect(saveButton.disabled).toBe(true)
+		// Initialization alone must never push an updateSettings for the setting —
+		// only an explicit user edit + Save does (verified by the next test).
+		expect(vscode.postMessage).not.toHaveBeenCalledWith(
+			expect.objectContaining({
+				type: "updateSettings",
+				updatedSettings: expect.objectContaining({
+					allowSymlinksOutsideWorkspace: expect.anything(),
+				}),
+			}),
+		)
 	})
 
 	it("includes allowSymlinksOutsideWorkspace in the save payload after a real user edit", () => {
