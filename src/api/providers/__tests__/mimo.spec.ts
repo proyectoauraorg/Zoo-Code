@@ -1050,6 +1050,11 @@ describe("MimoHandler", () => {
 			expect(toolChunks).toHaveLength(1)
 			expect(toolChunks[0].id).toBe("call_read")
 			expect(toolChunks[0].name).toBe("read_file")
+
+			// finish_reason "tool_calls" flushes the active tool call as a tool_call_end event.
+			const endChunks = chunks.filter((c) => c.type === "tool_call_end")
+			expect(endChunks).toHaveLength(1)
+			expect(endChunks[0].id).toBe("call_read")
 		})
 
 		it("should handle stream with no usage in final chunk", async () => {
