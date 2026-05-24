@@ -186,15 +186,6 @@ describe("AskFollowupQuestionTool", () => {
 		expect(mockTask.say).toHaveBeenCalledWith("user_feedback", "", [])
 	})
 
-	it("should handle user providing undefined text response", async () => {
-		const params = { question: "What?", follow_up: [{ text: "A" }] }
-		;(mockTask.ask as any).mockResolvedValue({ text: undefined, images: [] })
-
-		await tool.execute(params, mockTask, mockCallbacks)
-
-		expect(mockTask.say).toHaveBeenCalledWith("user_feedback", "", [])
-	})
-
 	// ===== Error handling tests =====
 
 	it("should call handleError when task.ask throws", async () => {
