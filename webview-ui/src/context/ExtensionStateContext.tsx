@@ -488,6 +488,9 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 
 	const contextValue: ExtensionStateContextType = {
 		...state,
+		// `chatFontSize` is persisted as nullish (null on reset); normalize null to
+		// undefined so it matches the context type and means "use VS Code default".
+		chatFontSize: state.chatFontSize ?? undefined,
 		reasoningBlockCollapsed: state.reasoningBlockCollapsed ?? true,
 		didHydrateState,
 		showWelcome,
