@@ -40,7 +40,7 @@ describe("ApplyPatchTool.handlePartial", () => {
 	const mockedIsPathOutsideWorkspace = isPathOutsideWorkspace as MockedFunction<typeof isPathOutsideWorkspace>
 
 	let askSpy: MockedFunction<Task["ask"]>
-	let mockTask: Pick<Task, "cwd" | "ask">
+	let mockTask: Pick<Task, "cwd" | "ask" | "providerRef">
 	let tool: ApplyPatchTool
 
 	beforeEach(() => {
@@ -52,6 +52,13 @@ describe("ApplyPatchTool.handlePartial", () => {
 		mockTask = {
 			cwd,
 			ask: askSpy,
+			// handlePartial resolves the workspace boundary via resolveIsOutsideWorkspace,
+			// which reads providerRef.deref()?.getState(); stub it so it doesn't throw.
+			providerRef: {
+				deref: vi.fn().mockReturnValue({
+					getState: vi.fn().mockResolvedValue({ allowSymlinksOutsideWorkspace: false }),
+				}),
+			} as any,
 		}
 
 		mockedIsPathOutsideWorkspace.mockImplementation((absolutePath) =>
