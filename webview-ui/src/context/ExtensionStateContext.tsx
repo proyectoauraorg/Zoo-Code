@@ -124,6 +124,8 @@ export interface ExtensionStateContextType extends ExtensionState {
 	togglePinnedApiConfig: (configName: string) => void
 	setHistoryPreviewCollapsed: (value: boolean) => void
 	setReasoningBlockCollapsed: (value: boolean) => void
+	chatFontSize?: number
+	setChatFontSize: (value: number | undefined) => void
 	enterBehavior?: "send" | "newline"
 	setEnterBehavior: (value: "send" | "newline") => void
 	autoCondenseContext: boolean
@@ -473,6 +475,17 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 		vscode.postMessage({ type: "webviewDidLaunch" })
 	}, [])
 
+	// Apply the configurable chat font size as a CSS variable. When unset, the
+	// override is removed so the UI falls back to VS Code's `--vscode-font-size`.
+	useEffect(() => {
+		const root = document.documentElement
+		if (typeof state.chatFontSize === "number") {
+			root.style.setProperty("--zoo-chat-font-size", `${state.chatFontSize}px`)
+		} else {
+			root.style.removeProperty("--zoo-chat-font-size")
+		}
+	}, [state.chatFontSize])
+
 	const contextValue: ExtensionStateContextType = {
 		...state,
 		reasoningBlockCollapsed: state.reasoningBlockCollapsed ?? true,
@@ -572,6 +585,7 @@ export const ExtensionStateContextProvider: React.FC<{ children: React.ReactNode
 			setState((prevState) => ({ ...prevState, historyPreviewCollapsed: value })),
 		setReasoningBlockCollapsed: (value) =>
 			setState((prevState) => ({ ...prevState, reasoningBlockCollapsed: value })),
+		setChatFontSize: (value) => setState((prevState) => ({ ...prevState, chatFontSize: value })),
 		enterBehavior: state.enterBehavior ?? "send",
 		setEnterBehavior: (value) => setState((prevState) => ({ ...prevState, enterBehavior: value })),
 		setHasOpenedModeSelector: (value) => setState((prevState) => ({ ...prevState, hasOpenedModeSelector: value })),

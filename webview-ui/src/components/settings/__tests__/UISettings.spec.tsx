@@ -41,4 +41,50 @@ describe("UISettings", () => {
 		rerender(<UISettings {...defaultProps} reasoningBlockCollapsed={true} />)
 		expect(checkbox.checked).toBe(true)
 	})
+
+	describe("chat font size", () => {
+		it("shows the default font size when unset (init)", () => {
+			const { getByText, getByTestId } = render(<UISettings {...defaultProps} chatFontSize={undefined} />)
+			expect(getByTestId("chat-font-size-slider")).toBeTruthy()
+			// Default falls back to VS Code-equivalent default value.
+			expect(getByText("13px")).toBeTruthy()
+		})
+
+		it("shows the configured font size when set", () => {
+			const { getByText } = render(<UISettings {...defaultProps} chatFontSize={20} />)
+			expect(getByText("20px")).toBeTruthy()
+		})
+
+		it("persists a user-edited font size via setCachedStateField", () => {
+			const setCachedStateField = vi.fn()
+			const { getByTestId } = render(
+				<UISettings {...defaultProps} chatFontSize={14} setCachedStateField={setCachedStateField} />,
+			)
+
+			const slider = getByTestId("chat-font-size-slider").querySelector('[role="slider"]') as HTMLElement
+			slider.focus()
+			fireEvent.keyDown(slider, { key: "ArrowRight" })
+
+			expect(setCachedStateField).toHaveBeenCalledWith("chatFontSize", 15)
+		})
+
+		it("disables reset when unset and clears the value on reset", () => {
+			const setCachedStateField = vi.fn()
+			const { getByTestId, rerender } = render(
+				<UISettings {...defaultProps} chatFontSize={undefined} setCachedStateField={setCachedStateField} />,
+			)
+
+			const resetUnset = getByTestId("chat-font-size-reset") as HTMLButtonElement
+			expect(resetUnset.disabled).toBe(true)
+
+			rerender(
+				<UISettings {...defaultProps} chatFontSize={18} setCachedStateField={setCachedStateField} />,
+			)
+			const resetSet = getByTestId("chat-font-size-reset") as HTMLButtonElement
+			expect(resetSet.disabled).toBe(false)
+
+			fireEvent.click(resetSet)
+			expect(setCachedStateField).toHaveBeenCalledWith("chatFontSize", undefined)
+		})
+	})
 })
