@@ -836,22 +836,16 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 					continue
 				}
 
-				// Handle error events
+				// Handle error events. Always fail on an error/failed event type, even
+				// when it carries no `error`/`message`, so we never keep consuming a
+				// stream the API has already reported as broken.
 				if (event?.type === "response.error" || event?.type === "error") {
-					if (event.error || event.message) {
-						throw new Error(
-							`Responses API error: ${event.error?.message || event.message || "Unknown error"}`,
-						)
-					}
+					throw new Error(`Responses API error: ${event.error?.message || event.message || "Unknown error"}`)
 				}
 
 				// Handle failed event
 				if (event?.type === "response.failed") {
-					if (event.error || event.message) {
-						throw new Error(
-							`Response failed: ${event.error?.message || event.message || "Unknown failure"}`,
-						)
-					}
+					throw new Error(`Response failed: ${event.error?.message || event.message || "Unknown failure"}`)
 				}
 
 				// Fallback for older formats

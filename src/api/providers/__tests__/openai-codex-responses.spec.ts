@@ -515,5 +515,27 @@ describe("OpenAiHandler - Codex model detection", () => {
 				}
 			}).rejects.toThrow("Responses API error: Something went wrong")
 		})
+
+		it("throws on an error event even when it carries no error/message details", async () => {
+			handler = new OpenAiHandler({
+				openAiApiKey: "test-key",
+				openAiModelId: "gpt-5.3-codex",
+				openAiUseAzure: true,
+			})
+
+			mockResponsesCreate.mockResolvedValue({
+				[Symbol.asyncIterator]: async function* () {
+					yield { type: "response.failed" }
+				},
+			})
+
+			await expect(async () => {
+				for await (const _chunk of handler.createMessage("System", [{ role: "user", content: "Hello" }], {
+					taskId: "test",
+				})) {
+					// consume
+				}
+			}).rejects.toThrow("Response failed: Unknown failure")
+		})
 	})
 })
