@@ -493,7 +493,7 @@ export class GeminiHandler extends BaseProvider implements SingleCompletionHandl
 		let id: string
 		let info: ModelInfo
 
-		if (modelId && modelId in geminiModels) {
+		if (modelId && Object.hasOwn(geminiModels, modelId)) {
 			id = modelId
 			info = geminiModels[modelId as GeminiModelId]
 		} else if (modelId && modelId.toLowerCase().startsWith("gemini-")) {
