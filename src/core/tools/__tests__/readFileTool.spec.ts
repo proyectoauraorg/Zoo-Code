@@ -748,14 +748,10 @@ describe("ReadFileTool", () => {
 			mockTask.ask.mockResolvedValue({ response: "yesButtonClicked", text: undefined, images: undefined })
 			mockedFsReadFile.mockResolvedValue(Buffer.from("legacy content"))
 
-			const consoleWarnSpy = vi.spyOn(console, "warn").mockImplementation(() => {})
-
 			await readFileTool.execute({ files: [{ path: "legacy.ts" }] } as any, mockTask as any, callbacks)
 
-			expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining("Legacy format detected"))
+			// The legacy path emits "File: <path>" entries — proof the backward-compat branch ran.
 			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("File: legacy.ts"))
-
-			consoleWarnSpy.mockRestore()
 		})
 
 		it("should return error when legacy files array is empty", async () => {
@@ -816,6 +812,8 @@ describe("ReadFileTool", () => {
 
 			expect(mockTask.say).toHaveBeenCalledWith("rooignore_error", "secret.env")
 			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("blocked by the .rooignore"))
+			// Consistent with the native path: a blocked file fails the tool turn.
+			expect(mockTask.didToolFailInCurrentTurn).toBe(true)
 		})
 
 		it("should deny legacy file read when user clicks no", async () => {
