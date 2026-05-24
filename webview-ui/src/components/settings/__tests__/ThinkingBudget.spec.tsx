@@ -317,7 +317,7 @@ describe("ThinkingBudget", () => {
 			supportsPromptCache: true,
 		}
 
-		const glmApiConfiguration = { apiProvider: "zai", apiModelId: "glm-5.1" }
+		const glmApiConfiguration = { apiProvider: "zai", apiModelId: "glm-5.1" } as const
 
 		it("should render the max output tokens slider alongside the reasoning effort dropdown", () => {
 			render(
