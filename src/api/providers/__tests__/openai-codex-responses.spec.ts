@@ -244,6 +244,60 @@ describe("OpenAiHandler - Codex model detection", () => {
 			expect(input[3].type).toBe("function_call_output")
 			expect(input[3].output).toBe("2")
 		})
+
+		it("converts tools to the flat Responses API schema (not nested under `function`)", async () => {
+			handler = new OpenAiHandler({
+				openAiApiKey: "test-key",
+				openAiModelId: "gpt-5.3-codex",
+				openAiBaseUrl: "https://test.openai.azure.com/openai/deployments/gpt5.3",
+				openAiUseAzure: true,
+			})
+
+			mockResponsesCreate.mockResolvedValue({
+				[Symbol.asyncIterator]: async function* () {
+					yield { type: "response.done", response: { usage: { input_tokens: 1, output_tokens: 1 } } }
+				},
+			})
+
+			const messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hi" }]
+			// Chat Completions nested tool shape (what the rest of the handler receives).
+			const tools = [
+				{
+					type: "function",
+					function: {
+						name: "calculator",
+						description: "Evaluate a math expression",
+						parameters: {
+							type: "object",
+							properties: { expression: { type: "string" } },
+							required: ["expression"],
+						},
+					},
+				},
+			]
+
+			for await (const _chunk of handler.createMessage("You are helpful", messages, {
+				taskId: "test",
+				tools,
+			} as any)) {
+				// Consume the stream so responses.create is invoked.
+			}
+
+			const requestBody = mockResponsesCreate.mock.calls[0][0]
+			expect(Array.isArray(requestBody.tools)).toBe(true)
+			expect(requestBody.tools).toHaveLength(1)
+
+			const tool = requestBody.tools[0]
+			// Flat structure: fields live at the top level, not under `function`.
+			expect(tool.type).toBe("function")
+			expect(tool.name).toBe("calculator")
+			expect(tool.description).toBe("Evaluate a math expression")
+			expect(tool.function).toBeUndefined()
+			expect(tool.parameters).toBeDefined()
+			expect(tool.parameters.properties).toBeDefined()
+			// Non-MCP tools are sent with strict schema validation enabled.
+			expect(tool.strict).toBe(true)
+		})
 	})
 
 	describe("createMessage codex tool call streaming", () => {
