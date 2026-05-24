@@ -6,7 +6,19 @@ import { BaseTerminalProcess } from "./BaseTerminalProcess"
 import { Terminal } from "./Terminal"
 
 export class TerminalProcess extends BaseTerminalProcess {
+	// #266: Some processes (interactive tools, programs that trap SIGINT and
+	// prompt for confirmation) need more than one Ctrl+C to actually exit. We
+	// re-send Ctrl+C up to this many times, checking between attempts whether
+	// the process has exited, before giving up and letting dispose() proceed.
+	private static readonly ABORT_MAX_ATTEMPTS = 3
+	// Delay between Ctrl+C re-sends. Kept short so cancel stays responsive; the
+	// whole retry window is bounded by ABORT_MAX_ATTEMPTS * ABORT_RETRY_DELAY_MS.
+	private static readonly ABORT_RETRY_DELAY_MS = 500
+
 	private terminalRef: WeakRef<Terminal>
+	// Guards against overlapping abort retry loops if abort() is called again
+	// while a previous loop is still re-sending Ctrl+C.
+	private aborting = false
 
 	constructor(terminal: Terminal) {
 		super()
@@ -256,9 +268,48 @@ export class TerminalProcess extends BaseTerminalProcess {
 	}
 
 	public override abort() {
-		if (this.isListening) {
-			// Send SIGINT using CTRL+C
-			this.terminal.terminal.sendText("\x03")
+		if (!this.isListening) {
+			return
+		}
+
+		// Send SIGINT using CTRL+C.
+		this.terminal.terminal.sendText("\x03")
+
+		// #266: A single Ctrl+C isn't always enough — some processes trap SIGINT
+		// and keep running. Kick off a bounded retry that re-sends Ctrl+C a few
+		// times, verifying between attempts whether the process actually exited
+		// (terminal.busy flips to false on completion). This is intentionally
+		// fire-and-forget so it never blocks the synchronous cancel path; the
+		// total retry window is bounded so dispose() is never delayed for long.
+		if (!this.aborting) {
+			this.aborting = true
+			void this.retryAbort().finally(() => {
+				this.aborting = false
+			})
+		}
+	}
+
+	/**
+	 * Re-sends Ctrl+C up to ABORT_MAX_ATTEMPTS times, waiting ABORT_RETRY_DELAY_MS
+	 * between attempts and stopping early once the process exits (or once we stop
+	 * listening). Bounded so it can never loop indefinitely.
+	 */
+	private async retryAbort(): Promise<void> {
+		for (let attempt = 1; attempt < TerminalProcess.ABORT_MAX_ATTEMPTS; attempt++) {
+			await new Promise((resolve) => setTimeout(resolve, TerminalProcess.ABORT_RETRY_DELAY_MS))
+
+			// Stop if the process already exited or we're no longer listening.
+			if (!this.isListening) {
+				return
+			}
+
+			const terminal = this.terminalRef.deref()
+
+			if (!terminal || !terminal.busy) {
+				return
+			}
+
+			terminal.terminal.sendText("\x03")
 		}
 	}
 

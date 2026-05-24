@@ -186,6 +186,90 @@ describe("TerminalProcess", () => {
 		})
 	})
 
+	describe("abort", () => {
+		const RETRY_DELAY_MS = 500
+		const MAX_ATTEMPTS = 3
+
+		beforeEach(() => {
+			vi.useFakeTimers()
+		})
+
+		afterEach(() => {
+			vi.runOnlyPendingTimers()
+			vi.useRealTimers()
+		})
+
+		it("sends a single Ctrl+C immediately and nothing else when the process exits (#266)", async () => {
+			// Process exits right away: terminal is no longer busy.
+			mockTerminalInfo.busy = false
+
+			terminalProcess.abort()
+
+			// Immediate Ctrl+C.
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+
+			// Advance past the whole retry window; no further Ctrl+C since not busy.
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * MAX_ATTEMPTS)
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+		})
+
+		it("re-sends Ctrl+C up to the bounded maximum while the process stays busy (#266)", async () => {
+			// Process keeps ignoring SIGINT: terminal stays busy throughout.
+			mockTerminalInfo.busy = true
+
+			terminalProcess.abort()
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+
+			// Each retry tick re-sends Ctrl+C while still busy, bounded by MAX_ATTEMPTS.
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * (MAX_ATTEMPTS + 2))
+
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(MAX_ATTEMPTS)
+			expect(mockTerminal.sendText).toHaveBeenCalledWith("\x03")
+		})
+
+		it("stops re-sending Ctrl+C once the process exits mid-retry (#266)", async () => {
+			mockTerminalInfo.busy = true
+
+			terminalProcess.abort()
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(1)
+
+			// First retry tick: still busy, re-send.
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS)
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
+
+			// Process exits before the next tick.
+			mockTerminalInfo.busy = false
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * MAX_ATTEMPTS)
+
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
+		})
+
+		it("does nothing when the process is no longer listening (#266)", async () => {
+			terminalProcess["isListening"] = false
+
+			terminalProcess.abort()
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * MAX_ATTEMPTS)
+
+			expect(mockTerminal.sendText).not.toHaveBeenCalled()
+		})
+
+		it("does not start overlapping retry loops when abort() is called repeatedly (#266)", async () => {
+			mockTerminalInfo.busy = true
+
+			terminalProcess.abort()
+			terminalProcess.abort()
+
+			// Two immediate Ctrl+C from the two abort() calls, but only one retry loop.
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2)
+
+			await vi.advanceTimersByTimeAsync(RETRY_DELAY_MS * (MAX_ATTEMPTS + 2))
+
+			// 2 immediate + (MAX_ATTEMPTS - 1) retries from the single loop.
+			expect(mockTerminal.sendText).toHaveBeenCalledTimes(2 + (MAX_ATTEMPTS - 1))
+		})
+	})
+
 	describe("getUnretrievedOutput", () => {
 		it("returns and clears unretrieved output", () => {
 			terminalProcess["fullOutput"] = `\x1b]633;C\x07previous\nnew output\x1b]633;D\x07`
