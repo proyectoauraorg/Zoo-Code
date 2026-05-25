@@ -185,6 +185,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 		terminalZdotdir,
 		writeDelayMs,
 		showRooIgnoredFiles,
+		compactToolUI,
 		enableSubfolderRules,
 		maxImageFileSize,
 		maxTotalImageSize,
@@ -834,6 +835,7 @@ const SettingsView = forwardRef<SettingsViewRef, SettingsViewProps>(({ onDone, t
 								maxOpenTabsContext={maxOpenTabsContext}
 								maxWorkspaceFiles={maxWorkspaceFiles ?? 200}
 								showRooIgnoredFiles={showRooIgnoredFiles}
+								compactToolUI={compactToolUI ?? false}
 								enableSubfolderRules={enableSubfolderRules}
 								maxImageFileSize={maxImageFileSize}
 								maxTotalImageSize={maxTotalImageSize}
