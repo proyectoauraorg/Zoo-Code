@@ -346,6 +346,15 @@ function getSelectedModel({
 			const info = routerModels["vercel-ai-gateway"]?.[id]
 			return { id, info }
 		}
+		case "opencode-go": {
+			const id = getValidatedModelId(
+				apiConfiguration.opencodeGoModelId,
+				routerModels["opencode-go"],
+				defaultModelId,
+			)
+			const info = routerModels["opencode-go"]?.[id]
+			return { id, info }
+		}
 		// case "anthropic":
 		// case "fake-ai":
 		default: {
