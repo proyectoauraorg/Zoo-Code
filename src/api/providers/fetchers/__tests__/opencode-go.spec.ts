@@ -35,6 +35,7 @@ describe("Opencode Go Fetchers", () => {
 
 			expect(mockedAxios.get).toHaveBeenCalledWith("https://opencode.ai/zen/go/v1/models", {
 				headers: { Authorization: "Bearer test-key" },
+				timeout: 10_000,
 			})
 
 			expect(Object.keys(models).sort()).toEqual(["deepseek-v4-pro", "glm-5.1"])

@@ -43,6 +43,7 @@ export async function getOpencodeGoModels(apiKey?: string): Promise<Record<strin
 	try {
 		const response = await axios.get(`${OPENCODE_GO_BASE_URL}/models`, {
 			headers: apiKey ? { Authorization: `Bearer ${apiKey}` } : undefined,
+			timeout: 10_000,
 		})
 
 		const result = opencodeGoModelsResponseSchema.safeParse(response.data)
