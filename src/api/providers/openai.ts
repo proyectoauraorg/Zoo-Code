@@ -377,16 +377,20 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 			throw handleOpenAIError(error, this.providerName)
 		}
 
-		// Extract text from the Responses API response
+		// Extract text from the Responses API response — collect ALL output_text parts
 		if (response?.output && Array.isArray(response.output)) {
+			const textParts: string[] = []
 			for (const outputItem of response.output) {
 				if (outputItem.type === "message" && outputItem.content) {
 					for (const content of outputItem.content) {
 						if (content.type === "output_text" && content.text) {
-							return content.text
+							textParts.push(content.text)
 						}
 					}
 				}
+			}
+			if (textParts.length > 0) {
+				return textParts.join("")
 			}
 		}
 
@@ -595,12 +599,13 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		// Build tools in Responses API format (flat structure, not nested under function)
 		const tools = this._convertToolsForResponsesApi(metadata?.tools)
 
-		// Build the request body
+		const useStreaming = this.options.openAiStreamingEnabled ?? true
+
+		// Build the request body (stream flag added per path below)
 		const requestBody: any = {
 			model: model.id,
 			input: formattedInput,
-			stream: true,
-			store: false,
+			store: metadata?.store ?? false,
 			instructions: systemPrompt,
 			...(tools && tools.length > 0 ? { tools } : {}),
 			...(metadata?.tool_choice ? { tool_choice: metadata.tool_choice } : {}),
@@ -616,6 +621,68 @@ export class OpenAiHandler extends BaseProvider implements SingleCompletionHandl
 		if (this.options.includeMaxTokens === true) {
 			requestBody.max_output_tokens = this.options.modelMaxTokens || model.info.maxTokens
 		}
+
+		if (!useStreaming) {
+			// Non-streaming path: await the full response then yield results
+			try {
+				const response = await (this.client as any).responses.create({
+					...requestBody,
+					stream: false,
+				})
+
+				// Extract text, tool calls, and reasoning from response output
+				if (Array.isArray(response?.output)) {
+					for (const outputItem of response.output) {
+						if (outputItem?.type === "function_call" || outputItem?.type === "tool_call") {
+							const callId = outputItem.call_id || outputItem.tool_call_id || outputItem.id
+							const name = outputItem.name || outputItem.function?.name
+							const argsRaw = outputItem.arguments || outputItem.function?.arguments || outputItem.input
+							const args =
+								typeof argsRaw === "string"
+									? argsRaw
+									: argsRaw && typeof argsRaw === "object"
+										? JSON.stringify(argsRaw)
+										: ""
+							if (typeof callId === "string" && callId.length > 0 && typeof name === "string" && name.length > 0) {
+								yield { type: "tool_call", id: callId, name, arguments: args }
+							}
+						} else if ((outputItem?.type === "text" || outputItem?.type === "output_text") && outputItem?.text) {
+							yield { type: "text", text: outputItem.text }
+						} else if (outputItem?.type === "message" && Array.isArray(outputItem.content)) {
+							for (const content of outputItem.content) {
+								if ((content?.type === "text" || content?.type === "output_text") && content?.text) {
+									yield { type: "text", text: content.text }
+								}
+							}
+						} else if (outputItem?.type === "reasoning" && outputItem?.summary) {
+							for (const summary of outputItem.summary) {
+								if (summary?.text) {
+									yield { type: "reasoning", text: summary.text }
+								}
+							}
+						}
+					}
+				}
+
+				// Extract usage from non-streaming response
+				const usage = response?.usage
+				if (usage) {
+					yield {
+						type: "usage",
+						inputTokens: usage.input_tokens ?? usage.prompt_tokens ?? 0,
+						outputTokens: usage.output_tokens ?? usage.completion_tokens ?? 0,
+						cacheWriteTokens: usage.cache_creation_input_tokens || undefined,
+						cacheReadTokens: usage.cache_read_input_tokens || undefined,
+					}
+				}
+			} catch (error) {
+				throw handleOpenAIError(error, this.providerName)
+			}
+			return
+		}
+
+		// Streaming path
+		requestBody.stream = true
 
 		// State tracking for streaming
 		let pendingToolCallId: string | undefined
