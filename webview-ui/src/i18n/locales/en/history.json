@@ -47,5 +47,9 @@
 	"subtaskTag": "Subtask",
 	"deleteWithSubtasks": "This will also delete {{count}} subtask(s). Are you sure?",
 	"expandSubtasks": "Expand subtasks",
-	"collapseSubtasks": "Collapse subtasks"
+	"collapseSubtasks": "Collapse subtasks",
+	"deepSearch": "Search in messages",
+	"searchingContent": "Searching messages...",
+	"contentMatch": "Content match",
+	"noResults": "No results found"
 }

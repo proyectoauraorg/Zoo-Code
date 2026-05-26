@@ -28,6 +28,7 @@ import { TelemetryService } from "@roo-code/telemetry"
 
 import { type ApiMessage } from "../task-persistence/apiMessages"
 import { saveTaskMessages } from "../task-persistence"
+import { readTaskMessages } from "../task-persistence/taskMessages"
 
 import { ClineProvider } from "./ClineProvider"
 import { handleCheckpointRestoreOperation } from "./checkpointRestoreHandler"
@@ -1762,6 +1763,74 @@ export const webviewMessageHandler = async (
 					results: [],
 					error: errorMessage,
 					requestId: message.requestId,
+				})
+			}
+			break
+		}
+		case "searchHistoryContent": {
+			const query = (message.text || "").trim()
+			if (query.length < 3) {
+				await provider.postMessageToWebview({
+					type: "historyContentSearchResults",
+					requestId: message.requestId,
+					payload: [],
+				})
+				break
+			}
+
+			try {
+				const allTasks = provider.taskHistoryStore.getAll()
+				const globalStoragePath = provider.contextProxy.globalStorageUri.fsPath
+				const results: Array<{ id: string; snippet: string }> = []
+
+				const lowerQuery = query.toLowerCase()
+
+				for (const task of allTasks) {
+					if (results.length >= 50) break
+
+					try {
+						const messages = await readTaskMessages({
+							taskId: task.id,
+							globalStoragePath,
+						})
+
+						for (const msg of messages) {
+							if (!msg.text) continue
+							const lowerText = msg.text.toLowerCase()
+							const idx = lowerText.indexOf(lowerQuery)
+							if (idx !== -1) {
+								// Extract a snippet around the match
+								const start = Math.max(0, idx - 40)
+								const end = Math.min(msg.text.length, idx + query.length + 60)
+								const snippet =
+									(start > 0 ? "..." : "") +
+									msg.text.slice(start, end) +
+									(end < msg.text.length ? "..." : "")
+
+								results.push({ id: task.id, snippet })
+								break // Only one match per task
+							}
+						}
+					} catch {
+						// Skip tasks that fail to read
+						continue
+					}
+				}
+
+				await provider.postMessageToWebview({
+					type: "historyContentSearchResults",
+					requestId: message.requestId,
+					payload: results,
+				})
+			} catch (error) {
+				provider.log(
+					`Error searching history content: ${JSON.stringify(error, Object.getOwnPropertyNames(error), 2)}`,
+				)
+				await provider.postMessageToWebview({
+					type: "historyContentSearchResults",
+					requestId: message.requestId,
+					payload: [],
+					error: error instanceof Error ? error.message : String(error),
 				})
 			}
 			break
