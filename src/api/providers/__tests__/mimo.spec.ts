@@ -950,4 +950,184 @@ describe("MimoHandler", () => {
 			expect(params.model).toBe("mimo-v2.5")
 		})
 	})
+
+	describe("advanced streaming scenarios", () => {
+		it("should handle stream with multiple text chunks concatenated", async () => {
+			mockCreate.mockImplementationOnce(async () => ({
+				[Symbol.asyncIterator]: async function* () {
+					yield {
+						choices: [{ delta: { content: "Hello" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: { content: " world" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: { content: "!" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: {}, index: 0, finish_reason: "stop" }],
+						usage: { prompt_tokens: 10, completion_tokens: 3, total_tokens: 13 },
+					}
+				},
+			}))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: [{ type: "text", text: "Hi" }] },
+			]
+
+			const chunks: any[] = []
+			const stream = handler.createMessage("System prompt", messages)
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const textChunks = chunks.filter((c) => c.type === "text")
+			expect(textChunks).toHaveLength(3)
+			expect(textChunks.map((c: any) => c.text).join("")).toBe("Hello world!")
+		})
+
+		it("should handle stream with both reasoning and tool calls", async () => {
+			mockCreate.mockImplementationOnce(async () => ({
+				[Symbol.asyncIterator]: async function* () {
+					yield {
+						choices: [{ delta: { reasoning_content: "Let me think" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: { reasoning_content: " about this" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: { content: "I'll read it" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [
+							{
+								delta: {
+									tool_calls: [
+										{
+											index: 0,
+											id: "call_read",
+											function: { name: "read_file", arguments: '{"path":"test.ts"}' },
+										},
+									],
+								},
+								index: 0,
+							},
+						],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: {}, index: 0, finish_reason: "tool_calls" }],
+						usage: { prompt_tokens: 20, completion_tokens: 15, total_tokens: 35 },
+					}
+				},
+			}))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: [{ type: "text", text: "Read test.ts" }] },
+			]
+
+			const chunks: any[] = []
+			const stream = handler.createMessage("System prompt", messages)
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const reasoningChunks = chunks.filter((c) => c.type === "reasoning")
+			expect(reasoningChunks).toHaveLength(2)
+			expect(reasoningChunks.map((c: any) => c.text).join("")).toBe("Let me think about this")
+
+			const textChunks = chunks.filter((c) => c.type === "text")
+			expect(textChunks).toHaveLength(1)
+			expect(textChunks[0].text).toBe("I'll read it")
+
+			const toolChunks = chunks.filter((c) => c.type === "tool_call_partial")
+			expect(toolChunks).toHaveLength(1)
+			expect(toolChunks[0].id).toBe("call_read")
+			expect(toolChunks[0].name).toBe("read_file")
+
+			// finish_reason "tool_calls" flushes the active tool call as a tool_call_end event.
+			const endChunks = chunks.filter((c) => c.type === "tool_call_end")
+			expect(endChunks).toHaveLength(1)
+			expect(endChunks[0].id).toBe("call_read")
+		})
+
+		it("should handle stream with no usage in final chunk", async () => {
+			mockCreate.mockImplementationOnce(async () => ({
+				[Symbol.asyncIterator]: async function* () {
+					yield {
+						choices: [{ delta: { content: "Done" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: {}, index: 0, finish_reason: "stop" }],
+						usage: null,
+					}
+				},
+			}))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: [{ type: "text", text: "Hello" }] },
+			]
+
+			const chunks: any[] = []
+			const stream = handler.createMessage("System prompt", messages)
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const usageChunks = chunks.filter((c) => c.type === "usage")
+			expect(usageChunks).toHaveLength(0)
+
+			const textChunks = chunks.filter((c) => c.type === "text")
+			expect(textChunks).toHaveLength(1)
+			expect(textChunks[0].text).toBe("Done")
+		})
+
+		it("should handle stream with zero cache tokens in usage", async () => {
+			mockCreate.mockImplementationOnce(async () => ({
+				[Symbol.asyncIterator]: async function* () {
+					yield {
+						choices: [{ delta: { content: "Hi" }, index: 0 }],
+						usage: null,
+					}
+					yield {
+						choices: [{ delta: {}, index: 0, finish_reason: "stop" }],
+						usage: {
+							prompt_tokens: 50,
+							completion_tokens: 10,
+							total_tokens: 60,
+							prompt_tokens_details: {
+								cache_write_tokens: 0,
+								cached_tokens: 0,
+							},
+						},
+					}
+				},
+			}))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{ role: "user", content: [{ type: "text", text: "Hello" }] },
+			]
+
+			const chunks: any[] = []
+			const stream = handler.createMessage("System prompt", messages)
+			for await (const chunk of stream) {
+				chunks.push(chunk)
+			}
+
+			const usageChunks = chunks.filter((c) => c.type === "usage")
+			expect(usageChunks).toHaveLength(1)
+			expect(usageChunks[0].inputTokens).toBe(50)
+			expect(usageChunks[0].outputTokens).toBe(10)
+			// Handler uses `|| undefined` so zero-valued cache tokens are omitted
+			expect(usageChunks[0].cacheWriteTokens).toBeUndefined()
+			expect(usageChunks[0].cacheReadTokens).toBeUndefined()
+		})
+	})
 })
