@@ -284,9 +284,11 @@ export class TerminalProcess extends BaseTerminalProcess {
 		// total retry window is bounded so dispose() is never delayed for long.
 		if (!this.aborting) {
 			this.aborting = true
-			void this.retryAbort().finally(() => {
-				this.aborting = false
-			})
+			void this.retryAbort()
+				.finally(() => {
+					this.aborting = false
+				})
+				.catch((err) => console.error("[TerminalProcess] retryAbort error:", err))
 		}
 	}
 
