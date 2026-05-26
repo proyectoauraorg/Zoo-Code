@@ -1420,9 +1420,10 @@ export const ChatRowContent = ({
 					if (compactToolUI && !isExpanded) {
 						const compactLabel = sayTool.path ? `${sayTool.tool}: ${sayTool.path}` : sayTool.tool
 						return (
-							<div
+							<button
+								type="button"
 								onClick={handleToggleExpand}
-								className="flex items-center gap-2 py-0.5 cursor-pointer text-vscode-descriptionForeground hover:text-vscode-foreground"
+								className="flex items-center gap-2 py-0.5 cursor-pointer text-vscode-descriptionForeground hover:text-vscode-foreground bg-transparent border-none text-inherit w-full text-left"
 								data-testid="compact-tool-row"
 								title={t("chat:compactTool.expandHint")}>
 								<ChevronRight className="w-3.5 h-3.5 shrink-0" />
@@ -1430,7 +1431,7 @@ export const ChatRowContent = ({
 								<span className="truncate text-sm">
 									{t("chat:compactTool.label", { tool: compactLabel })}
 								</span>
-							</div>
+							</button>
 						)
 					}
 
