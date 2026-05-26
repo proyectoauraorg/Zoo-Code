@@ -29,6 +29,16 @@ const opencodeGoModelsResponseSchema = z.object({
 	data: z.array(opencodeGoModelSchema),
 })
 
+/**
+ * Maps a raw Opencode Go model entry to the internal {@link ModelInfo} shape.
+ *
+ * Falls back to {@link opencodeGoDefaultModelInfo} when the upstream payload
+ * omits context-window or max-token fields, ensuring downstream consumers
+ * always receive a fully-populated object.
+ *
+ * @param model - Validated model entry from the `/models` response.
+ * @returns Normalised model metadata suitable for the model picker.
+ */
 export const parseOpencodeGoModel = (model: OpencodeGoModel): ModelInfo => ({
 	maxTokens: model.max_output_tokens ?? model.max_tokens ?? opencodeGoDefaultModelInfo.maxTokens,
 	contextWindow: model.context_window ?? model.context_length ?? opencodeGoDefaultModelInfo.contextWindow,
@@ -37,6 +47,17 @@ export const parseOpencodeGoModel = (model: OpencodeGoModel): ModelInfo => ({
 	description: model.description ?? model.name,
 })
 
+/**
+ * Fetches the list of available models from the Opencode Go `/models` endpoint.
+ *
+ * The endpoint shape mirrors the OpenAI `/models` response. A permissive Zod
+ * schema is used so that unknown fields are silently dropped rather than
+ * causing a hard failure. Invalid entries (e.g. missing `id`) are skipped
+ * with a console warning rather than propagated to the UI.
+ *
+ * @param apiKey - Optional Bearer token for authenticated requests.
+ * @returns A record mapping model IDs to their normalised {@link ModelInfo}.
+ */
 export async function getOpencodeGoModels(apiKey?: string): Promise<Record<string, ModelInfo>> {
 	const models: Record<string, ModelInfo> = {}
 
@@ -47,16 +68,20 @@ export async function getOpencodeGoModels(apiKey?: string): Promise<Record<strin
 		})
 
 		const result = opencodeGoModelsResponseSchema.safeParse(response.data)
-		const data = result.success ? result.data.data : (response.data?.data ?? [])
+		const rawData = result.success ? result.data.data : response.data?.data
+		const data = Array.isArray(rawData) ? rawData : []
 
 		if (!result.success) {
 			console.error(`Opencode Go models response is invalid: ${JSON.stringify(result.error.format())}`)
 		}
 
-		for (const model of data) {
-			if (model?.id) {
-				models[model.id] = parseOpencodeGoModel(model)
+		for (const rawModel of data) {
+			const parsed = opencodeGoModelSchema.safeParse(rawModel)
+			if (!parsed.success) {
+				console.warn(`Skipping invalid Opencode Go model entry: ${JSON.stringify(rawModel)}`)
+				continue
 			}
+			models[parsed.data.id] = parseOpencodeGoModel(parsed.data)
 		}
 	} catch (error) {
 		console.error(`Error fetching Opencode Go models: ${error instanceof Error ? error.message : String(error)}`)

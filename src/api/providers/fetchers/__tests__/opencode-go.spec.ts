@@ -64,6 +64,31 @@ describe("Opencode Go Fetchers", () => {
 			mockedAxios.get.mockRejectedValue(new Error("network"))
 			expect(await getOpencodeGoModels("k")).toEqual({})
 		})
+
+		it("falls back to an empty array when response.data.data is not an array", async () => {
+			mockedAxios.get.mockResolvedValue({ data: { data: null } })
+			expect(await getOpencodeGoModels("k")).toEqual({})
+		})
+
+		it("skips entries that fail safeParse with a console.warn", async () => {
+			mockedAxios.get.mockResolvedValue({
+				data: {
+					data: [
+						{ id: "valid-model", context_window: 50000 },
+						{ not_a_field: true }, // no `id` — will fail safeParse
+					],
+				},
+			})
+			const warnSpy = vitest.spyOn(console, "warn").mockImplementation(() => {})
+
+			const models = await getOpencodeGoModels("k")
+
+			expect(Object.keys(models)).toEqual(["valid-model"])
+			expect(warnSpy).toHaveBeenCalledTimes(1)
+			expect(warnSpy.mock.calls[0][0]).toContain("Skipping invalid Opencode Go model entry")
+
+			warnSpy.mockRestore()
+		})
 	})
 
 	describe("parseOpencodeGoModel", () => {

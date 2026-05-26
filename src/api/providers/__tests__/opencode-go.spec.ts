@@ -147,6 +147,8 @@ describe("OpencodeGoHandler", () => {
 					model: "glm-5.1",
 					stream: true,
 					stream_options: { include_usage: true },
+					max_completion_tokens: 32768,
+					temperature: expect.any(Number),
 				}),
 			)
 		})
@@ -157,7 +159,13 @@ describe("OpencodeGoHandler", () => {
 			mockCreate.mockResolvedValue({ choices: [{ message: { content: "the answer" } }] })
 			const handler = new OpencodeGoHandler(mockOptions)
 			expect(await handler.completePrompt("ping")).toBe("the answer")
-			expect(mockCreate).toHaveBeenCalledWith(expect.objectContaining({ model: "glm-5.1", stream: false }))
+			expect(mockCreate).toHaveBeenCalledWith(
+				expect.objectContaining({
+					model: "glm-5.1",
+					stream: false,
+					max_completion_tokens: 32768,
+				}),
+			)
 		})
 
 		it("wraps errors with an Opencode Go-specific message", async () => {

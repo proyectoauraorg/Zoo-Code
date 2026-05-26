@@ -12,14 +12,22 @@ import type { SingleCompletionHandler, ApiHandlerCreateMessageMetadata } from ".
 import { RouterProvider } from "./router-provider"
 
 /**
- * Opencode "Go" plan — OpenAI-compatible gateway (https://opencode.ai/zen/go/v1).
+ * API handler for the Opencode "Go" subscription plan.
+ *
+ * Routes requests through the OpenAI-compatible gateway at
+ * `https://opencode.ai/zen/go/v1`, delegating model resolution and streaming
+ * logic to the shared {@link RouterProvider} base class.
  *
  * Exposes the Go subscription's models as a first-class provider with a dynamic
  * model list (fetched from `/v1/models`) so users can switch models on the fly,
  * instead of configuring each one manually as a separate OpenAI-Compatible
  * provider (#172).
+ *
+ * Supports text generation, reasoning content (GLM/DeepSeek), tool calls,
+ * and non-streaming prompt completion.
  */
 export class OpencodeGoHandler extends RouterProvider implements SingleCompletionHandler {
+	/** Creates a new handler bound to the user's Go API key and selected model. */
 	constructor(options: ApiHandlerOptions) {
 		super({
 			options,
@@ -32,6 +40,10 @@ export class OpencodeGoHandler extends RouterProvider implements SingleCompletio
 		})
 	}
 
+	/**
+	 * Streams a chat completion response, yielding typed chunks for text,
+	 * reasoning, partial tool calls, and token usage.
+	 */
 	override async *createMessage(
 		systemPrompt: string,
 		messages: Anthropic.Messages.MessageParam[],
@@ -96,6 +108,13 @@ export class OpencodeGoHandler extends RouterProvider implements SingleCompletio
 		}
 	}
 
+	/**
+	 * Performs a non-streaming chat completion and returns the full response text.
+	 *
+	 * @param prompt - The user prompt to send as a single user message.
+	 * @returns The model's reply text, or an empty string if no content is returned.
+	 * @throws Error with an Opencode Go-specific prefix if the request fails.
+	 */
 	async completePrompt(prompt: string): Promise<string> {
 		const { id: modelId, info } = await this.fetchModel()
 
