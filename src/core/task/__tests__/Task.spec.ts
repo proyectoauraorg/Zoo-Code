@@ -396,6 +396,33 @@ describe("Cline", () => {
 		})
 	})
 
+	describe("sayAndCreateMissingParamError", () => {
+		it("surfaces a localized error notice and returns the missing-parameter tool error for both relPath branches", async () => {
+			const cline = new Task({
+				provider: mockProvider,
+				apiConfiguration: mockApiConfig,
+				task: "test task",
+				startTask: false,
+			})
+
+			const saySpy = vi.spyOn(cline, "say").mockResolvedValue(undefined)
+
+			// relPath provided -> the "...WithPath" message branch.
+			const withPath = await cline.sayAndCreateMissingParamError("read_file", "path", "src/foo.ts")
+			// relPath omitted -> the plain message branch.
+			const withoutPath = await cline.sayAndCreateMissingParamError("execute_command", "command")
+
+			// Both branches emit an "error" say with localized text.
+			expect(saySpy).toHaveBeenCalledTimes(2)
+			expect(saySpy).toHaveBeenNthCalledWith(1, "error", expect.any(String))
+			expect(saySpy).toHaveBeenNthCalledWith(2, "error", expect.any(String))
+
+			// The returned tool error names the missing parameter.
+			expect(withPath).toContain("path")
+			expect(withoutPath).toContain("command")
+		})
+	})
+
 	describe("getEnvironmentDetails", () => {
 		describe("API conversation handling", () => {
 			beforeEach(() => {
