@@ -257,7 +257,9 @@ describe("ListFilesTool", () => {
 		await tool.execute(params, mockTask, mockCallbacks)
 
 		expect(mockCallbacks.askApproval).toHaveBeenCalled()
+		expect(mockCallbacks.askApproval).toHaveBeenCalled()
 		expect(mockCallbacks.pushToolResult).not.toHaveBeenCalled()
+		expect(mockCallbacks.handleError).not.toHaveBeenCalled()
 	})
 
 	it("should push result when user approves", async () => {
