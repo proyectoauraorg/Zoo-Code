@@ -1127,7 +1127,7 @@ export const webviewMessageHandler = async (
 			provider.postMessageToWebview({
 				type: "rooCreditBalance",
 				requestId,
-				values: { error: "Roo credit balance is no longer available." },
+				values: { error: "Zoo credit balance is no longer available." },
 			})
 			break
 		}
