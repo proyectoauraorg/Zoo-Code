@@ -95,16 +95,17 @@ describe("FireworksHandler", () => {
 	})
 
 	it.each([
-		"accounts/fireworks/models/glm-5p1",
-		"accounts/fireworks/models/kimi-k2p6",
-		"accounts/fireworks/models/deepseek-v4-pro",
-	] as const satisfies readonly FireworksModelId[])("should expose newly added model %s", (modelId) => {
+		{ modelId: "accounts/fireworks/models/glm-5p1" as const, contextWindow: 202752, inputPrice: 1.4, outputPrice: 4.4, cacheReadsPrice: 0.26 },
+		{ modelId: "accounts/fireworks/models/kimi-k2p6" as const, contextWindow: 262144, inputPrice: 0.95, outputPrice: 4.0, cacheReadsPrice: 0.16 },
+		{ modelId: "accounts/fireworks/models/deepseek-v4-pro" as const, contextWindow: 1048576, inputPrice: 1.74, outputPrice: 3.48, cacheReadsPrice: 0.14 },
+	])("should expose newly added model $modelId", ({ modelId, contextWindow, inputPrice, outputPrice, cacheReadsPrice }) => {
 		expect(fireworksModels[modelId]).toBeDefined()
 		const info = fireworksModels[modelId]
 		expect(info.maxTokens).toBeGreaterThan(0)
-		expect(info.contextWindow).toBeGreaterThan(0)
-		expect(info.inputPrice).toBeGreaterThanOrEqual(0)
-		expect(info.outputPrice).toBeGreaterThanOrEqual(0)
+		expect(info.contextWindow).toBe(contextWindow)
+		expect(info.inputPrice).toBe(inputPrice)
+		expect(info.outputPrice).toBe(outputPrice)
+		expect(info.cacheReadsPrice).toBe(cacheReadsPrice)
 		expect(info.description).toBeTruthy()
 
 		const handlerWithModel = new FireworksHandler({
