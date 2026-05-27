@@ -1,4 +1,4 @@
-import React, { memo, useState, useMemo } from "react"
+import React, { memo, useState, useMemo, useCallback } from "react"
 import { ArrowLeft } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
@@ -20,6 +20,7 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
+import { useHistoryPagination } from "./useHistoryPagination"
 import { useGroupedTasks } from "./useGroupedTasks"
 import { countAllSubtasks } from "./types"
 import TaskItem from "./TaskItem"
@@ -33,7 +34,7 @@ type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRe
 
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const {
-		tasks,
+		tasks: clientTasks,
 		searchQuery,
 		setSearchQuery,
 		sortOption,
@@ -43,6 +44,25 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setShowAllWorkspaces,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
+
+	// Server-side pagination for non-search sort options
+	const isServerSidePagination = sortOption !== "mostRelevant"
+
+	const pagination = useHistoryPagination({
+		sortOption,
+		showAllWorkspaces,
+		enabled: isServerSidePagination,
+	})
+
+	// Determine the active tasks based on sort mode:
+	// - "mostRelevant" (fuzzy search) uses client-side filtering from useTaskSearch
+	// - All other sorts use server-side pagination from useHistoryPagination
+	const tasks = useMemo(() => {
+		if (isServerSidePagination) {
+			return pagination.tasks
+		}
+		return clientTasks
+	}, [isServerSidePagination, pagination.tasks, clientTasks])
 
 	// Use grouped tasks hook
 	const { groups, flatTasks, toggleExpand, isSearchMode } = useGroupedTasks(tasks, searchQuery)
@@ -100,6 +120,13 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			setShowBatchDeleteDialog(true)
 		}
 	}
+
+	// Infinite scroll: load more when reaching the end
+	const handleEndReached = useCallback(() => {
+		if (isServerSidePagination && pagination.hasMore && !pagination.isLoading) {
+			pagination.loadMore()
+		}
+	}, [isServerSidePagination, pagination])
 
 	return (
 		<Tab>
@@ -285,10 +312,49 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						data={groups}
 						data-testid="virtuoso-container"
 						initialTopMostItemIndex={0}
+						endReached={isServerSidePagination ? handleEndReached : undefined}
+						overscan={200}
 						components={{
 							List: React.forwardRef((props, ref) => (
 								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
 							)),
+							Footer: () => {
+								if (!isServerSidePagination) return null
+
+								if (pagination.isLoading) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-descriptionForeground"
+											data-testid="loading-more-indicator">
+											<span className="codicon codicon-loading animate-spin mr-2" />
+											{t("history:loadingMore")}
+										</div>
+									)
+								}
+
+								if (pagination.error) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-errorForeground"
+											data-testid="error-indicator">
+											<span className="codicon codicon-error mr-2" />
+											{t(pagination.error)}
+										</div>
+									)
+								}
+
+								if (!pagination.hasMore && groups.length > 0) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-descriptionForeground text-xs"
+											data-testid="end-of-list-indicator">
+											{t("history:endOfList")}
+										</div>
+									)
+								}
+
+								return null
+							},
 						}}
 						itemContent={(_index, group) => (
 							<TaskGroupItem

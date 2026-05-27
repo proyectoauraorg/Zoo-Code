@@ -852,6 +852,36 @@ export const webviewMessageHandler = async (
 			}
 			break
 		}
+		case "getHistoryPage": {
+			try {
+				const { requestId, sortOption, showAllWorkspaces, cursor, pageSize } = message
+				const workspace = showAllWorkspaces ? undefined : (provider.getCurrentTask()?.cwd ?? provider.cwd)
+				const result = provider.taskHistoryStore.getPaginated({
+					sortOption: sortOption ?? "newest",
+					workspace,
+					cursor,
+					pageSize: pageSize ?? 50,
+				})
+
+				await provider.postMessageToWebview({
+					type: "historyPageResponse",
+					historyPageTasks: result.items,
+					historyPageNextCursor: result.nextCursor,
+					historyPageHasMore: result.hasMore,
+					historyPageRequestId: requestId,
+				})
+			} catch (error) {
+				console.error("Error in getHistoryPage:", error)
+				await provider.postMessageToWebview({
+					type: "historyPageResponse",
+					historyPageTasks: [],
+					historyPageHasMore: false,
+					historyPageRequestId: message.requestId,
+					error: error instanceof Error ? error.message : String(error),
+				})
+			}
+			break
+		}
 		case "exportTaskWithId":
 			provider.exportTaskWithId(message.text!)
 			break
