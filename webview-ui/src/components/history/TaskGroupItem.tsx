@@ -53,9 +53,13 @@ const TaskGroupItem = ({
 		<div
 			data-testid={`task-group-${parent.id}`}
 			className={cn(
-				"bg-vscode-editor-background rounded-xl border border-transparent overflow-hidden",
+				"bg-vscode-editor-background rounded-xl border border-transparent",
+				"transition-all duration-300",
+				"hover:bg-vscode-list-hoverBackground hover:border-vscode-panel-border",
 				className,
-			)}>
+			)}
+			role="group"
+			aria-label={parent.task}>
 			{/* Parent task */}
 			<TaskItem
 				item={parent}
@@ -66,6 +70,7 @@ const TaskGroupItem = ({
 				onToggleSelection={onToggleSelection}
 				onDelete={onDelete}
 				hasSubtasks={hasSubtasks}
+				subtaskCount={totalSubtaskCount}
 			/>
 
 			{/* Subtask collapsible row — shows total recursive count */}
@@ -77,12 +82,16 @@ const TaskGroupItem = ({
 			{hasSubtasks && (
 				<div
 					data-testid="subtask-list"
+					role="list"
+					aria-label={isExpanded ? "Subtask list" : undefined}
 					className={cn(
 						"overflow-clip transition-all duration-500",
 						isExpanded ? "max-h-[2000px] pb-2" : "max-h-0",
 					)}>
 					{subtasks.map((node) => (
-						<SubtaskRow key={node.item.id} node={node} depth={1} onToggleExpand={onToggleSubtaskExpand} />
+						<div key={node.item.id} role="listitem">
+							<SubtaskRow node={node} depth={1} onToggleExpand={onToggleSubtaskExpand} />
+						</div>
 					))}
 				</div>
 			)}

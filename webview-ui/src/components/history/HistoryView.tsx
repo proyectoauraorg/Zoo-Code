@@ -1,5 +1,5 @@
-import React, { memo, useState, useMemo } from "react"
-import { ArrowLeft } from "lucide-react"
+import React, { memo, useState, useMemo, useEffect } from "react"
+import { ArrowLeft, Inbox, SearchX } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import { Virtuoso } from "react-virtuoso"
@@ -24,6 +24,7 @@ import { useGroupedTasks } from "./useGroupedTasks"
 import { countAllSubtasks } from "./types"
 import TaskItem from "./TaskItem"
 import TaskGroupItem from "./TaskGroupItem"
+import HistorySkeleton from "./HistorySkeleton"
 
 type HistoryViewProps = {
 	onDone: () => void
@@ -52,6 +53,20 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
 	const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
 	const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState<boolean>(false)
+	const [isLoading, setIsLoading] = useState(true)
+
+	// Show skeleton while initial task data loads from extension
+	useEffect(() => {
+		if (tasks.length > 0) {
+			setIsLoading(false)
+		}
+	}, [tasks.length])
+
+	// After a brief timeout, stop loading even if no tasks exist
+	useEffect(() => {
+		const timeout = setTimeout(() => setIsLoading(false), 800)
+		return () => clearTimeout(timeout)
+	}, [])
 
 	// Get subtask count for a task (recursive total)
 	const getSubtaskCount = useMemo(() => {
@@ -239,7 +254,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 										? t("history:deselectAll")
 										: t("history:selectAll")}
 								</span>
-								<span className="ml-auto text-vscode-descriptionForeground text-xs">
+								<span
+									className="ml-auto text-vscode-descriptionForeground text-xs"
+									aria-live="polite"
+									data-testid="selection-count">
 									{t("history:selectedItems", {
 										selected: selectedTaskIds.length,
 										total: tasks.length,
@@ -252,7 +270,41 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			</TabHeader>
 
 			<TabContent className="px-2 py-0">
-				{isSearchMode && flatTasks ? (
+				{isLoading ? (
+					<HistorySkeleton />
+				) : tasks.length === 0 && !searchQuery ? (
+					/* Empty state: no tasks at all */
+					<div
+						className="flex flex-col items-center justify-center py-12 px-4 text-center"
+						data-testid="history-empty-state"
+						role="status"
+						aria-live="polite">
+						<Inbox className="size-12 text-vscode-descriptionForeground/40 mb-4" />
+						<h3 className="text-lg font-medium text-vscode-foreground mb-1">{t("history:emptyTitle")}</h3>
+						<p className="text-sm text-vscode-descriptionForeground">{t("history:emptyDescription")}</p>
+					</div>
+				) : tasks.length === 0 && searchQuery ? (
+					/* Empty state: search with no results */
+					<div
+						className="flex flex-col items-center justify-center py-12 px-4 text-center"
+						data-testid="history-empty-search-state"
+						role="status"
+						aria-live="polite">
+						<SearchX className="size-12 text-vscode-descriptionForeground/40 mb-4" />
+						<h3 className="text-lg font-medium text-vscode-foreground mb-1">
+							{t("history:emptySearchTitle")}
+						</h3>
+						<p className="text-sm text-vscode-descriptionForeground mb-3">
+							{t("history:emptySearchDescription")}
+						</p>
+						<Button
+							variant="secondary"
+							onClick={() => setSearchQuery("")}
+							data-testid="clear-search-button">
+							{t("history:clearSearch")}
+						</Button>
+					</div>
+				) : isSearchMode && flatTasks ? (
 					// Search mode: flat list with subtask prefix
 					<Virtuoso
 						className="flex-1 overflow-y-scroll"
@@ -261,21 +313,29 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						initialTopMostItemIndex={0}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div
+									{...props}
+									ref={ref}
+									data-testid="virtuoso-item-list"
+									role="list"
+									aria-label={t("history:taskList")}
+								/>
 							)),
 						}}
 						itemContent={(_index, item) => (
-							<TaskItem
-								key={item.id}
-								item={item}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(item.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								className="m-2"
-							/>
+							<div role="listitem">
+								<TaskItem
+									key={item.id}
+									item={item}
+									variant="full"
+									showWorkspace={showAllWorkspaces}
+									isSelectionMode={isSelectionMode}
+									isSelected={selectedTaskIds.includes(item.id)}
+									onToggleSelection={toggleTaskSelection}
+									onDelete={handleDelete}
+									className="m-2"
+								/>
+							</div>
 						)}
 					/>
 				) : (
@@ -287,44 +347,57 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						initialTopMostItemIndex={0}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div
+									{...props}
+									ref={ref}
+									data-testid="virtuoso-item-list"
+									role="list"
+									aria-label={t("history:taskList")}
+								/>
 							)),
 						}}
 						itemContent={(_index, group) => (
-							<TaskGroupItem
-								key={group.parent.id}
-								group={group}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(group.parent.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								onToggleExpand={() => toggleExpand(group.parent.id)}
-								onToggleSubtaskExpand={toggleExpand}
-								className="m-2"
-							/>
+							<div role="listitem">
+								<TaskGroupItem
+									key={group.parent.id}
+									group={group}
+									variant="full"
+									showWorkspace={showAllWorkspaces}
+									isSelectionMode={isSelectionMode}
+									isSelected={selectedTaskIds.includes(group.parent.id)}
+									onToggleSelection={toggleTaskSelection}
+									onDelete={handleDelete}
+									onToggleExpand={() => toggleExpand(group.parent.id)}
+									onToggleSubtaskExpand={toggleExpand}
+									className="m-2"
+								/>
+							</div>
 						)}
 					/>
 				)}
 			</TabContent>
 
 			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
-			{isSelectionMode && selectedTaskIds.length > 0 && (
-				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center">
-					<div className="text-vscode-foreground">
-						{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
-					</div>
-					<div className="flex gap-2">
-						<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
-							{t("history:clearSelection")}
-						</Button>
-						<Button variant="primary" onClick={handleBatchDelete}>
-							{t("history:deleteSelected")}
-						</Button>
-					</div>
+			<div
+				className={`fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center transition-all duration-300 ${
+					isSelectionMode && selectedTaskIds.length > 0
+						? "translate-y-0 opacity-100"
+						: "translate-y-full opacity-0 pointer-events-none"
+				}`}
+				role="toolbar"
+				aria-label={t("history:deleteSelected")}>
+				<div className="text-vscode-foreground" aria-live="polite">
+					{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
 				</div>
-			)}
+				<div className="flex gap-2">
+					<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
+						{t("history:clearSelection")}
+					</Button>
+					<Button variant="primary" onClick={handleBatchDelete}>
+						{t("history:deleteSelected")}
+					</Button>
+				</div>
+			</div>
 
 			{/* Delete dialog */}
 			{deleteTaskId && (

@@ -54,5 +54,18 @@
 	"subtaskTag": "Subtarea",
 	"deleteWithSubtasks": "Esto también eliminará {{count}} subtarea(s). ¿Estás seguro?",
 	"expandSubtasks": "Expandir subtareas",
-	"collapseSubtasks": "Contraer subtareas"
+	"collapseSubtasks": "Contraer subtareas",
+	"emptyTitle": "Aún no hay tareas",
+	"emptyDescription": "Inicia una conversación para ver tu historial aquí",
+	"emptySearchTitle": "Ninguna tarea coincide con tu búsqueda",
+	"emptySearchDescription": "Intenta con un término de búsqueda diferente",
+	"clearSearch": "Limpiar búsqueda",
+	"statusActive": "Activa",
+	"statusCompleted": "Completada",
+	"statusDelegated": "Delegada",
+	"taskList": "Lista de historial de tareas",
+	"taskListItem": "Tarea: {{task}}",
+	"taskGroupItem": "Grupo de tareas: {{task}}",
+	"taskGroupList": "Lista de grupos de tareas",
+	"subtaskList": "Lista de subtareas"
 }

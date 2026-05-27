@@ -47,5 +47,18 @@
 	"subtaskTag": "Subtask",
 	"deleteWithSubtasks": "This will also delete {{count}} subtask(s). Are you sure?",
 	"expandSubtasks": "Expand subtasks",
-	"collapseSubtasks": "Collapse subtasks"
+	"collapseSubtasks": "Collapse subtasks",
+	"emptyTitle": "No tasks yet",
+	"emptyDescription": "Start a conversation to see your history here",
+	"emptySearchTitle": "No tasks match your search",
+	"emptySearchDescription": "Try a different search term",
+	"clearSearch": "Clear search",
+	"statusActive": "Active",
+	"statusCompleted": "Completed",
+	"statusDelegated": "Delegated",
+	"taskList": "Task history list",
+	"taskListItem": "Task: {{task}}",
+	"taskGroupItem": "Task group: {{task}}",
+	"taskGroupList": "Task group list",
+	"subtaskList": "Subtask list"
 }
