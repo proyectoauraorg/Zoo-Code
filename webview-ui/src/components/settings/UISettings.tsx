@@ -57,10 +57,18 @@ export const UISettings = ({
 
 	const handleChatFontSizeChange = (value: number) => {
 		setCachedStateField("chatFontSize", value)
+
+		// Track telemetry event
+		telemetryClient.capture("ui_settings_chat_font_size_changed", {
+			value,
+		})
 	}
 
 	const handleChatFontSizeReset = () => {
 		setCachedStateField("chatFontSize", undefined)
+
+		// Track telemetry event
+		telemetryClient.capture("ui_settings_chat_font_size_reset")
 	}
 
 	return (
