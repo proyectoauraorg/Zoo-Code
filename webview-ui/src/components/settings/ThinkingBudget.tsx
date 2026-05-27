@@ -196,7 +196,10 @@ export const ThinkingBudget = ({ apiConfiguration, setApiConfigurationField, mod
 					}>
 					{t("settings:providers.useReasoning")}
 				</Checkbox>
-				{maxOutputTokensControl}
+				{/* Only show the max-output-tokens slider when reasoning is enabled: with it off,
+				    getModelMaxOutputTokens returns the model default regardless of the slider, so an
+				    interactive-but-ignored control would mislead. Matches the budget path's guard. */}
+				{enableReasoningEffort && maxOutputTokensControl}
 			</div>
 		)
 	}
