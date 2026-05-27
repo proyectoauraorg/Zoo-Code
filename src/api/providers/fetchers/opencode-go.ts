@@ -72,7 +72,7 @@ export async function getOpencodeGoModels(apiKey?: string): Promise<Record<strin
 		const data = Array.isArray(rawData) ? rawData : []
 
 		if (!result.success) {
-			console.error(`Opencode Go models response is invalid: ${JSON.stringify(result.error.format())}`)
+			console.warn(`Opencode Go models response did not match expected schema; falling back to per-item parsing: ${JSON.stringify(result.error.format())}`)
 		}
 
 		for (const rawModel of data) {
