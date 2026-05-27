@@ -369,9 +369,9 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: {},
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				"zoo-gateway": {},
 				poe: {},
 				deepseek: {},
-				"opencode-go": {},
 			},
 			values: undefined,
 		})
@@ -456,9 +456,9 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: {},
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				"zoo-gateway": {},
 				poe: {},
 				deepseek: {},
-				"opencode-go": {},
 			},
 			values: undefined,
 		})
@@ -512,9 +512,9 @@ describe("webviewMessageHandler - requestRouterModels", () => {
 				ollama: {},
 				lmstudio: {},
 				"vercel-ai-gateway": mockModels,
+				"zoo-gateway": {},
 				poe: {},
 				deepseek: {},
-				"opencode-go": {},
 			},
 			values: undefined,
 		})

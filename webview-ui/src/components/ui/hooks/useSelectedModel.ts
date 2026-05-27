@@ -11,6 +11,7 @@ import {
 	minimaxModels,
 	mimoModels,
 	geminiModels,
+	opencodeGoDefaultModelInfo,
 	mistralModels,
 	openAiModelInfoSaneDefaults,
 	openAiNativeModels,
@@ -27,7 +28,6 @@ import {
 	qwenCodeModels,
 	litellmDefaultModelInfo,
 	lMStudioDefaultModelInfo,
-	opencodeGoDefaultModelInfo,
 	BEDROCK_1M_CONTEXT_MODEL_IDS,
 	VERTEX_1M_CONTEXT_MODEL_IDS,
 	isDynamicProvider,
@@ -356,6 +356,15 @@ function getSelectedModel({
 			// Fall back to the provider's default ModelInfo so capability-driven UI
 			// keeps working when the /models list is empty or unavailable.
 			const info = routerModels["opencode-go"]?.[id] ?? opencodeGoDefaultModelInfo
+			return { id, info }
+		}
+		case "zoo-gateway": {
+			const id = getValidatedModelId(
+				apiConfiguration.zooGatewayModelId,
+				routerModels["zoo-gateway"],
+				defaultModelId,
+			)
+			const info = routerModels["zoo-gateway"]?.[id]
 			return { id, info }
 		}
 		// case "anthropic":

@@ -18,7 +18,6 @@ import { fileExistsAtPath } from "../../../utils/fs"
 
 import { getOpenRouterModels } from "./openrouter"
 import { getVercelAiGatewayModels } from "./vercel-ai-gateway"
-import { getOpencodeGoModels } from "./opencode-go"
 import { getRequestyModels } from "./requesty"
 import { getUnboundModels } from "./unbound"
 import { getLiteLLMModels } from "./litellm"
@@ -27,6 +26,8 @@ import { getOllamaModels } from "./ollama"
 import { getLMStudioModels } from "./lmstudio"
 import { getPoeModels } from "./poe"
 import { getDeepSeekModels } from "./deepseek"
+import { getOpencodeGoModels } from "./opencode-go"
+import { getZooGatewayModels } from "./zoo-gateway"
 
 const memoryCache = new NodeCache({ stdTTL: 5 * 60, checkperiod: 5 * 60 })
 
@@ -87,14 +88,17 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 		case "vercel-ai-gateway":
 			models = await getVercelAiGatewayModels()
 			break
-		case "opencode-go":
-			models = await getOpencodeGoModels(options.apiKey)
-			break
 		case "poe":
 			models = await getPoeModels(options.apiKey, options.baseUrl)
 			break
 		case "deepseek":
 			models = await getDeepSeekModels(options.baseUrl, options.apiKey)
+			break
+		case "opencode-go":
+			models = await getOpencodeGoModels(options.apiKey)
+			break
+		case "zoo-gateway":
+			models = await getZooGatewayModels({ zooSessionToken: options.apiKey, zooGatewayBaseUrl: options.baseUrl })
 			break
 		default: {
 			// Ensures router is exhaustively checked if RouterName is a strict union.
@@ -120,7 +124,10 @@ async function fetchModelsFromProvider(options: GetModelsOptions): Promise<Model
 export const getModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 	const { provider } = options
 
-	let models = getModelsFromCache(provider)
+	// Always fetch fresh to prevent serving stale models from different auth contexts.
+	const shouldSkipCache = provider === "zoo-gateway"
+
+	let models = shouldSkipCache ? undefined : getModelsFromCache(provider)
 
 	if (models) {
 		return models
@@ -132,13 +139,14 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 
 		// Only cache non-empty results to prevent persisting failed API responses
 		// Empty results could indicate API failure rather than "no models exist"
-		if (modelCount > 0) {
+		// Zoo Gateway models are user-specific - skip caching entirely
+		if (modelCount > 0 && !shouldSkipCache) {
 			memoryCache.set(provider, models)
 
 			await writeModels(provider, models).catch((err) =>
 				console.error(`[MODEL_CACHE] Error writing ${provider} models to file cache:`, err),
 			)
-		} else {
+		} else if (modelCount === 0) {
 			TelemetryService.instance.captureEvent(TelemetryEventName.MODEL_CACHE_EMPTY_RESPONSE, {
 				provider,
 				context: "getModels",
@@ -167,12 +175,22 @@ export const getModels = async (options: GetModelsOptions): Promise<ModelRecord>
 export const refreshModels = async (options: GetModelsOptions): Promise<ModelRecord> => {
 	const { provider } = options
 
-	// Check if there's already an in-flight refresh for this provider
+	// Zoo Gateway models are user-specific (auth-scoped). Mirror the bypass in
+	// getModels() so we never persist one user's model list and serve it to a
+	// different authenticated user from cache.
+	const shouldSkipCache = provider === "zoo-gateway"
+
+	// Check if there's already an in-flight refresh for this provider.
 	// This prevents race conditions where multiple concurrent refreshes might
-	// overwrite each other's results
-	const existingRequest = inFlightRefresh.get(provider)
-	if (existingRequest) {
-		return existingRequest
+	// overwrite each other's results. Skip de-duplication for auth-scoped
+	// providers because two concurrent calls may carry different tokens
+	// (e.g., after a sign-out/sign-in within the same session) and we must
+	// not return the first caller's results to the second caller.
+	if (!shouldSkipCache) {
+		const existingRequest = inFlightRefresh.get(provider)
+		if (existingRequest) {
+			return existingRequest
+		}
 	}
 
 	// Create the refresh promise and track it
@@ -183,7 +201,7 @@ export const refreshModels = async (options: GetModelsOptions): Promise<ModelRec
 			const modelCount = Object.keys(models).length
 
 			// Get existing cached data for comparison
-			const existingCache = getModelsFromCache(provider)
+			const existingCache = shouldSkipCache ? undefined : getModelsFromCache(provider)
 			const existingCount = existingCache ? Object.keys(existingCache).length : 0
 
 			if (modelCount === 0) {
@@ -200,27 +218,36 @@ export const refreshModels = async (options: GetModelsOptions): Promise<ModelRec
 				}
 			}
 
-			// Update memory cache first
-			memoryCache.set(provider, models)
+			if (!shouldSkipCache) {
+				memoryCache.set(provider, models)
 
-			// Atomically write to disk (safeWriteJson handles atomic writes)
-			await writeModels(provider, models).catch((err) =>
-				console.error(`[refreshModels] Error writing ${provider} models to disk:`, err),
-			)
+				await writeModels(provider, models).catch((err) =>
+					console.error(`[refreshModels] Error writing ${provider} models to disk:`, err),
+				)
+			}
 
 			return models
 		} catch (error) {
-			// Log the error for debugging, then return existing cache if available (graceful degradation)
+			// Log the error for debugging, then return existing cache if available (graceful degradation).
+			// For auth-scoped providers (zoo-gateway) we MUST NOT return cached models from a prior
+			// session, since they could belong to a different user — return empty instead.
 			console.error(`[refreshModels] Failed to refresh ${provider} models:`, error)
+			if (shouldSkipCache) {
+				return {}
+			}
 			return getModelsFromCache(provider) || {}
 		} finally {
 			// Always clean up the in-flight tracking
-			inFlightRefresh.delete(provider)
+			if (!shouldSkipCache) {
+				inFlightRefresh.delete(provider)
+			}
 		}
 	})()
 
-	// Track the in-flight request
-	inFlightRefresh.set(provider, refreshPromise)
+	// Track the in-flight request (auth-scoped providers are excluded; see above).
+	if (!shouldSkipCache) {
+		inFlightRefresh.set(provider, refreshPromise)
+	}
 
 	return refreshPromise
 }
