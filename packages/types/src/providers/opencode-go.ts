@@ -13,8 +13,9 @@ export const opencodeGoDefaultModelInfo: ModelInfo = {
 	contextWindow: 200_000,
 	supportsImages: false,
 	supportsPromptCache: false,
-	inputPrice: 0,
-	outputPrice: 0,
+	// Pricing is intentionally omitted: ModelInfoView renders a `0` field as "$0.00 / 1M tokens"
+	// (implying the service is free), so we leave it unknown — consistent with the dynamically
+	// fetched models, which also leave price fields absent. See PR #319 review.
 	description: "Opencode Go plan model. Available models and metadata are resolved dynamically from /v1/models.",
 }
 
