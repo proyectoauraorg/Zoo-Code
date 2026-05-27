@@ -1,7 +1,10 @@
-import React, { memo, useState, useMemo } from "react"
+import React, { memo, useState, useMemo, useCallback } from "react"
+import type { HistoryItem } from "@roo-code/types"
 import { ArrowLeft } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
+import { ExportDialog } from "./ExportDialog"
+import { BatchActionBar } from "./BatchActionBar"
 import { Virtuoso } from "react-virtuoso"
 
 import { VSCodeTextField } from "@vscode/webview-ui-toolkit/react"
@@ -22,6 +25,7 @@ import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
 import { useGroupedTasks } from "./useGroupedTasks"
 import { countAllSubtasks } from "./types"
+import { useExtensionState } from "@/context/ExtensionStateContext"
 import TaskItem from "./TaskItem"
 import TaskGroupItem from "./TaskGroupItem"
 
@@ -43,15 +47,20 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setShowAllWorkspaces,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
+	const { cwd } = useExtensionState()
 
 	// Use grouped tasks hook
 	const { groups, flatTasks, toggleExpand, isSearchMode } = useGroupedTasks(tasks, searchQuery)
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const [deleteSubtaskCount, setDeleteSubtaskCount] = useState<number>(0)
+	const [deleteTaskText, setDeleteTaskText] = useState<string | undefined>(undefined)
+	const [deleteSubtaskNames, setDeleteSubtaskNames] = useState<string[]>([])
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
 	const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
 	const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState<boolean>(false)
+	const [showExportDialog, setShowExportDialog] = useState<boolean>(false)
+	const [exportTasks, setExportTasks] = useState<HistoryItem[]>([])
 
 	// Get subtask count for a task (recursive total)
 	const getSubtaskCount = useMemo(() => {
@@ -62,10 +71,20 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		return (taskId: string) => countMap.get(taskId) || 0
 	}, [groups])
 
-	// Handle delete with subtask count
+	// Handle delete with subtask count and preview
 	const handleDelete = (taskId: string) => {
 		setDeleteTaskId(taskId)
 		setDeleteSubtaskCount(getSubtaskCount(taskId))
+		// Find the task text for preview
+		const task = tasks.find((t) => t.id === taskId)
+		setDeleteTaskText(task?.task)
+		// Collect subtask names
+		const group = groups.find((g) => g.parent.id === taskId)
+		if (group) {
+			setDeleteSubtaskNames(group.subtasks.map((st) => st.item.task))
+		} else {
+			setDeleteSubtaskNames([])
+		}
 	}
 
 	// Toggle selection mode
@@ -94,12 +113,52 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		}
 	}
 
+	// Get selected task objects for batch operations
+	const selectedTaskObjects = useMemo(() => {
+		return tasks.filter((t) => selectedTaskIds.includes(t.id))
+	}, [tasks, selectedTaskIds])
+
 	// Handle batch delete button click
 	const handleBatchDelete = () => {
 		if (selectedTaskIds.length > 0) {
 			setShowBatchDeleteDialog(true)
 		}
 	}
+
+	// Handle batch export button click
+	const handleBatchExport = useCallback(() => {
+		if (selectedTaskIds.length > 0) {
+			setExportTasks(selectedTaskObjects)
+			setShowExportDialog(true)
+		}
+	}, [selectedTaskIds, selectedTaskObjects])
+
+	// Smart selection: all in current view
+	const handleSelectAllInView = useCallback(() => {
+		setSelectedTaskIds(tasks.map((t) => t.id))
+	}, [tasks])
+
+	// Smart selection: by workspace (current workspace)
+	const handleSelectByWorkspace = useCallback(() => {
+		const workspaceTasks = tasks.filter((t) => t.workspace === cwd)
+		setSelectedTaskIds(workspaceTasks.map((t) => t.id))
+	}, [tasks, cwd])
+
+	// Smart selection: by date range (last N days)
+	const handleSelectByDateRange = useCallback(
+		(days: number) => {
+			const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
+			const recentTasks = tasks.filter((t) => t.ts >= cutoff)
+			setSelectedTaskIds(recentTasks.map((t) => t.id))
+		},
+		[tasks],
+	)
+
+	// Smart selection: expensive tasks (totalCost > 1.0)
+	const handleSelectExpensive = useCallback(() => {
+		const expensiveTasks = tasks.filter((t) => (t.totalCost || 0) > 1.0)
+		setSelectedTaskIds(expensiveTasks.map((t) => t.id))
+	}, [tasks])
 
 	return (
 		<Tab>
@@ -309,32 +368,34 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 				)}
 			</TabContent>
 
-			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
+			{/* Batch action bar at bottom - only shown in selection mode with selected items */}
 			{isSelectionMode && selectedTaskIds.length > 0 && (
-				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center">
-					<div className="text-vscode-foreground">
-						{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
-					</div>
-					<div className="flex gap-2">
-						<Button variant="secondary" onClick={() => setSelectedTaskIds([])}>
-							{t("history:clearSelection")}
-						</Button>
-						<Button variant="primary" onClick={handleBatchDelete}>
-							{t("history:deleteSelected")}
-						</Button>
-					</div>
-				</div>
+				<BatchActionBar
+					selectedCount={selectedTaskIds.length}
+					totalCount={tasks.length}
+					onClearSelection={() => setSelectedTaskIds([])}
+					onDeleteSelected={handleBatchDelete}
+					onExportSelected={handleBatchExport}
+					onSelectAllInView={handleSelectAllInView}
+					onSelectByWorkspace={handleSelectByWorkspace}
+					onSelectByDateRange={handleSelectByDateRange}
+					onSelectExpensive={handleSelectExpensive}
+				/>
 			)}
 
 			{/* Delete dialog */}
 			{deleteTaskId && (
 				<DeleteTaskDialog
 					taskId={deleteTaskId}
+					taskText={deleteTaskText}
 					subtaskCount={deleteSubtaskCount}
+					subtaskNames={deleteSubtaskNames}
 					onOpenChange={(open) => {
 						if (!open) {
 							setDeleteTaskId(null)
 							setDeleteSubtaskCount(0)
+							setDeleteTaskText(undefined)
+							setDeleteSubtaskNames([])
 						}
 					}}
 					open
@@ -345,6 +406,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			{showBatchDeleteDialog && (
 				<BatchDeleteTaskDialog
 					taskIds={selectedTaskIds}
+					tasks={selectedTaskObjects}
 					open={showBatchDeleteDialog}
 					onOpenChange={(open) => {
 						if (!open) {
@@ -353,6 +415,21 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							setIsSelectionMode(false)
 						}
 					}}
+				/>
+			)}
+
+			{/* Export dialog (single and batch) */}
+			{showExportDialog && (
+				<ExportDialog
+					tasks={exportTasks}
+					open={showExportDialog}
+					onOpenChange={(open) => {
+						if (!open) {
+							setShowExportDialog(false)
+							setExportTasks([])
+						}
+					}}
+					isBatch={exportTasks.length > 1}
 				/>
 			)}
 		</Tab>

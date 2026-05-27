@@ -56,7 +56,7 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({
 			{!isSelectionMode && (
 				<div className="flex flex-row gap-0 -mx-1.5 items-center text-vscode-descriptionForeground/60 hover:text-vscode-descriptionForeground opacity-0 group-hover:opacity-100">
 					<CopyButton itemTask={item.task} />
-					{variant === "full" && <ExportButton itemId={item.id} />}
+					{variant === "full" && <ExportButton item={item} />}
 					{onDelete && <DeleteButton itemId={item.id} onDelete={onDelete} />}
 				</div>
 			)}
