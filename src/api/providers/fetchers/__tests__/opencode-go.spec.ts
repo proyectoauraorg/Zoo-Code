@@ -84,8 +84,10 @@ describe("Opencode Go Fetchers", () => {
 			const models = await getOpencodeGoModels("k")
 
 			expect(Object.keys(models)).toEqual(["valid-model"])
-			expect(warnSpy).toHaveBeenCalledTimes(1)
-			expect(warnSpy.mock.calls[0][0]).toContain("Skipping invalid Opencode Go model entry")
+			// Two warns: one for the outer schema mismatch, one for the invalid item
+			expect(warnSpy).toHaveBeenCalledTimes(2)
+			expect(warnSpy.mock.calls[0][0]).toContain("did not match expected schema")
+			expect(warnSpy.mock.calls[1][0]).toContain("Skipping invalid Opencode Go model entry")
 
 			warnSpy.mockRestore()
 		})
