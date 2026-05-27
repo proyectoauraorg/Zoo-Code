@@ -817,4 +817,337 @@ describe("ReadFileTool", () => {
 			expect(description).toBe("[read_file with missing path]")
 		})
 	})
+
+	describe("legacy format", () => {
+		it("should read a single file using legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			const content = "legacy content line 1\nlegacy content line 2"
+			// Legacy path calls readFile with "utf8" encoding so it returns a string
+			mockedFsReadFile.mockResolvedValue(content as any)
+
+			mockedReadWithSlice.mockReturnValue({
+				content: "1 | legacy content line 1\n2 | legacy content line 2",
+				returnedLines: 2,
+				totalLines: 2,
+				wasTruncated: false,
+				includedRanges: [[1, 2]],
+			})
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "legacy.txt" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), false)
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("File: legacy.txt"))
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("legacy content line 1"))
+		})
+
+		it("should read multiple files using legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			// Legacy path calls readFile with "utf8" encoding so it returns a string
+			mockedFsReadFile
+				.mockResolvedValueOnce("file one content" as any)
+				.mockResolvedValueOnce("file two content" as any)
+
+			mockedReadWithSlice
+				.mockReturnValueOnce({
+					content: "1 | file one content",
+					returnedLines: 1,
+					totalLines: 1,
+					wasTruncated: false,
+					includedRanges: [[1, 1]],
+				})
+				.mockReturnValueOnce({
+					content: "1 | file two content",
+					returnedLines: 1,
+					totalLines: 1,
+					wasTruncated: false,
+					includedRanges: [[1, 1]],
+				})
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "file1.txt" }, { path: "file2.txt" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledTimes(2)
+			const result = callbacks.pushToolResult.mock.calls[0][0]
+			expect(result).toContain("File: file1.txt")
+			expect(result).toContain("file one content")
+			expect(result).toContain("File: file2.txt")
+			expect(result).toContain("file two content")
+		})
+
+		it("should read line ranges in legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			const content = "line 1\nline 2\nline 3\nline 4\nline 5"
+			// Legacy path calls readFile with "utf8" encoding so it returns a string
+			mockedFsReadFile.mockResolvedValue(content as any)
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "ranged.txt", lineRanges: [{ start: 2, end: 4 }] }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			const result = callbacks.pushToolResult.mock.calls[0][0]
+			expect(result).toContain("2 | line 2")
+			expect(result).toContain("3 | line 3")
+			expect(result).toContain("4 | line 4")
+			expect(result).not.toContain("1 | line 1")
+			expect(result).not.toContain("5 | line 5")
+		})
+
+		it("should return error when files array is empty in legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			await readFileTool.execute(
+				{
+					files: [],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.consecutiveMistakeCount).toBe(1)
+			expect(mockTask.recordToolError).toHaveBeenCalledWith("read_file")
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("Error:"))
+		})
+
+		it("should deny file read in legacy format when user clicks no", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			mockTask.ask.mockResolvedValue({ response: "noButtonClicked", text: undefined, images: undefined })
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "denied.txt" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.didRejectTool).toBe(true)
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("Denied by user"))
+		})
+
+		it("should handle rooignore-blocked files in legacy format", async () => {
+			const mockTask = createMockTask({ rooIgnoreAllowed: false })
+			const callbacks = createMockCallbacks()
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "blocked.env" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.say).toHaveBeenCalledWith("rooignore_error", "blocked.env")
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("blocked by the .rooignore"))
+		})
+
+		it("should handle directory errors in legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			mockedFsStat.mockResolvedValue({ isDirectory: () => true } as any)
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "some-dir" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.say).toHaveBeenCalledWith(
+				"error",
+				expect.stringContaining("Cannot read 'some-dir' because it is a directory"),
+			)
+			expect(callbacks.pushToolResult).toHaveBeenCalledWith(expect.stringContaining("Error"))
+		})
+
+		it("should track file context in legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			// Legacy path calls readFile with "utf8" encoding so it returns a string
+			mockedFsReadFile.mockResolvedValue("tracked content" as any)
+
+			mockedReadWithSlice.mockReturnValue({
+				content: "1 | tracked content",
+				returnedLines: 1,
+				totalLines: 1,
+				wasTruncated: false,
+				includedRanges: [[1, 1]],
+			})
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "tracked.txt" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.fileContextTracker.trackFileContext).toHaveBeenCalledWith("tracked.txt", "read_tool")
+		})
+
+		it("should handle file read errors in legacy format", async () => {
+			const mockTask = createMockTask()
+			const callbacks = createMockCallbacks()
+
+			mockedFsReadFile.mockRejectedValue(new Error("ENOENT: no such file or directory"))
+
+			await readFileTool.execute(
+				{
+					files: [{ path: "missing.txt" }],
+					_legacyFormat: true,
+				},
+				mockTask as any,
+				callbacks,
+			)
+
+			expect(mockTask.say).toHaveBeenCalledWith(
+				"error",
+				expect.stringContaining("Error reading file missing.txt"),
+			)
+			const result = callbacks.pushToolResult.mock.calls[0][0]
+			expect(result).toContain("ENOENT")
+		})
+	})
+
+	describe("handlePartial", () => {
+		it("should send partial message with path for new format", async () => {
+			const mockTask = createMockTask()
+
+			await readFileTool.handlePartial(
+				mockTask as any,
+				{
+					name: "read_file",
+					partial: true,
+					nativeArgs: { path: "src/app.ts" },
+				} as any,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), true)
+			const sentMessage = JSON.parse(mockTask.ask.mock.calls[0][1])
+			expect(sentMessage.tool).toBe("readFile")
+			expect(sentMessage.path).toContain("src/app.ts")
+		})
+
+		it("should send partial message for legacy format showing first file", async () => {
+			const mockTask = createMockTask()
+
+			await readFileTool.handlePartial(
+				mockTask as any,
+				{
+					name: "read_file",
+					partial: true,
+					nativeArgs: {
+						files: [{ path: "first.txt" }, { path: "second.txt" }],
+						_legacyFormat: true,
+					},
+				} as any,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), true)
+			const sentMessage = JSON.parse(mockTask.ask.mock.calls[0][1])
+			expect(sentMessage.tool).toBe("readFile")
+			expect(sentMessage.path).toContain("first.txt")
+		})
+
+		it("should handle empty path gracefully", async () => {
+			const mockTask = createMockTask()
+
+			await readFileTool.handlePartial(
+				mockTask as any,
+				{
+					name: "read_file",
+					partial: true,
+					nativeArgs: { path: "" },
+				} as any,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), true)
+			const sentMessage = JSON.parse(mockTask.ask.mock.calls[0][1])
+			expect(sentMessage.tool).toBe("readFile")
+			expect(sentMessage.isOutsideWorkspace).toBe(false)
+		})
+
+		it("should handle missing nativeArgs gracefully", async () => {
+			const mockTask = createMockTask()
+
+			await readFileTool.handlePartial(
+				mockTask as any,
+				{
+					name: "read_file",
+					partial: true,
+				} as any,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), true)
+			const sentMessage = JSON.parse(mockTask.ask.mock.calls[0][1])
+			expect(sentMessage.tool).toBe("readFile")
+		})
+
+		it("should propagate partial flag to ask call", async () => {
+			const mockTask = createMockTask()
+
+			await readFileTool.handlePartial(
+				mockTask as any,
+				{
+					name: "read_file",
+					partial: false,
+					nativeArgs: { path: "test.ts" },
+				} as any,
+			)
+
+			expect(mockTask.ask).toHaveBeenCalledWith("tool", expect.any(String), false)
+		})
+
+		it("should catch errors from task.ask during partial handling", async () => {
+			const mockTask = createMockTask()
+
+			mockTask.ask.mockRejectedValueOnce(new Error("connection lost"))
+
+			// Should not throw
+			await expect(
+				readFileTool.handlePartial(
+					mockTask as any,
+					{
+						name: "read_file",
+						partial: true,
+						nativeArgs: { path: "test.ts" },
+					} as any,
+				),
+			).resolves.not.toThrow()
+		})
+	})
 })
