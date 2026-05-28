@@ -538,4 +538,221 @@ describe("OpenAiHandler - Codex model detection", () => {
 			}).rejects.toThrow("Response failed: Unknown failure")
 		})
 	})
+
+	const codexOptions = (overrides: Partial<ApiHandlerOptions> = {}): ApiHandlerOptions => ({
+		openAiApiKey: "test-key",
+		openAiModelId: "gpt-5.3-codex",
+		openAiUseAzure: true,
+		...overrides,
+	})
+
+	const collect = async (
+		h: OpenAiHandler,
+		messages: Anthropic.Messages.MessageParam[] = [{ role: "user", content: "Hi" }],
+	) => {
+		const chunks: any[] = []
+		for await (const chunk of h.createMessage("System", messages, { taskId: "test" })) {
+			chunks.push(chunk)
+		}
+		return chunks
+	}
+
+	const streamOf = (...events: any[]) => ({
+		[Symbol.asyncIterator]: async function* () {
+			for (const e of events) yield e
+		},
+	})
+
+	describe("createMessage codex non-streaming path", () => {
+		it("extracts tool calls, text, message content, reasoning and usage from a non-streaming response", async () => {
+			handler = new OpenAiHandler(codexOptions({ openAiStreamingEnabled: false }))
+
+			mockResponsesCreate.mockResolvedValue({
+				output: [
+					{ type: "function_call", call_id: "c1", name: "read_file", arguments: '{"path":"a.ts"}' },
+					{ type: "output_text", text: "top-level text" },
+					{ type: "message", content: [{ type: "output_text", text: "message text" }] },
+					{ type: "reasoning", summary: [{ text: "thinking out loud" }] },
+				],
+				usage: {
+					input_tokens: 7,
+					output_tokens: 11,
+					cache_read_input_tokens: 2,
+					cache_creation_input_tokens: 3,
+				},
+			})
+
+			const chunks = await collect(handler)
+
+			expect(mockResponsesCreate.mock.calls[0][0].stream).toBe(false)
+
+			const toolCalls = chunks.filter((c) => c.type === "tool_call")
+			expect(toolCalls).toHaveLength(1)
+			expect(toolCalls[0]).toMatchObject({ id: "c1", name: "read_file", arguments: '{"path":"a.ts"}' })
+
+			const texts = chunks.filter((c) => c.type === "text").map((c) => c.text)
+			expect(texts).toEqual(["top-level text", "message text"])
+
+			const reasoning = chunks.filter((c) => c.type === "reasoning")
+			expect(reasoning[0].text).toBe("thinking out loud")
+
+			const usage = chunks.find((c) => c.type === "usage")
+			expect(usage).toMatchObject({ inputTokens: 7, outputTokens: 11, cacheReadTokens: 2, cacheWriteTokens: 3 })
+		})
+
+		it("stringifies object tool-call arguments in the non-streaming path", async () => {
+			handler = new OpenAiHandler(codexOptions({ openAiStreamingEnabled: false }))
+
+			mockResponsesCreate.mockResolvedValue({
+				output: [{ type: "tool_call", id: "c2", name: "search", input: { query: "x" } }],
+			})
+
+			const chunks = await collect(handler)
+			const toolCalls = chunks.filter((c) => c.type === "tool_call")
+			expect(toolCalls[0]).toMatchObject({ id: "c2", name: "search", arguments: '{"query":"x"}' })
+		})
+
+		it("wraps non-streaming API errors via handleOpenAIError", async () => {
+			handler = new OpenAiHandler(codexOptions({ openAiStreamingEnabled: false }))
+			mockResponsesCreate.mockRejectedValue(new Error("boom"))
+			await expect(collect(handler)).rejects.toThrow()
+		})
+	})
+
+	describe("createMessage codex streaming event variants", () => {
+		it("emits text from a done-only event when no delta was seen", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(streamOf({ type: "response.output_text.done", text: "final text" }))
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["final text"])
+		})
+
+		it("emits text from a content_part event when no delta was seen", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({ type: "response.content_part.added", part: { type: "output_text", text: "part text" } }),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["part text"])
+		})
+
+		it("emits reasoning from reasoning delta events", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({ type: "response.reasoning_summary_text.delta", delta: "step 1" }),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "reasoning").map((c) => c.text)).toEqual(["step 1"])
+		})
+
+		it("emits refusal text from refusal delta events", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(streamOf({ type: "response.refusal.delta", delta: "cannot help" }))
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["[Refusal] cannot help"])
+		})
+
+		it("emits text from an output_item.added message", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({
+					type: "response.output_item.added",
+					item: { type: "message", content: [{ type: "output_text", text: "added msg" }] },
+				}),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["added msg"])
+		})
+
+		it("falls back to text from an output_item.done message when no text was streamed", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({
+					type: "response.output_item.done",
+					item: { type: "message", content: [{ type: "output_text", text: "done msg" }] },
+				}),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["done msg"])
+		})
+
+		it("extracts fallback text and usage from a response.done payload when nothing streamed", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({
+					type: "response.completed",
+					response: {
+						output: [{ type: "message", content: [{ type: "output_text", text: "completed text" }] }],
+						usage: { input_tokens: 4, output_tokens: 6 },
+					},
+				}),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["completed text"])
+			expect(chunks.find((c) => c.type === "usage")).toMatchObject({ inputTokens: 4, outputTokens: 6 })
+		})
+
+		it("supports the older choices/usage fallback shape", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(
+				streamOf({
+					choices: [{ delta: { content: "legacy chunk" } }],
+					usage: { prompt_tokens: 9, completion_tokens: 2 },
+				}),
+			)
+			const chunks = await collect(handler)
+			expect(chunks.filter((c) => c.type === "text").map((c) => c.text)).toEqual(["legacy chunk"])
+			expect(chunks.find((c) => c.type === "usage")).toMatchObject({ inputTokens: 9, outputTokens: 2 })
+		})
+	})
+
+	describe("createMessage codex request body + conversation formatting", () => {
+		it("includes max_output_tokens when includeMaxTokens is enabled", async () => {
+			handler = new OpenAiHandler(codexOptions({ includeMaxTokens: true, modelMaxTokens: 1234 }))
+			mockResponsesCreate.mockResolvedValue(streamOf({ type: "response.output_text.delta", delta: "x" }))
+			await collect(handler)
+			expect(mockResponsesCreate.mock.calls[0][0].max_output_tokens).toBe(1234)
+		})
+
+		it("formats image blocks, array tool_result content and assistant string content", async () => {
+			handler = new OpenAiHandler(codexOptions())
+			mockResponsesCreate.mockResolvedValue(streamOf({ type: "response.output_text.delta", delta: "ok" }))
+
+			const messages: Anthropic.Messages.MessageParam[] = [
+				{
+					role: "user",
+					content: [
+						{ type: "text", text: "look" },
+						{
+							type: "image",
+							source: { type: "base64", media_type: "image/png", data: "AAAA" },
+						},
+					],
+				},
+				{ role: "assistant", content: "sure thing" },
+				{
+					role: "user",
+					content: [
+						{
+							type: "tool_result",
+							tool_use_id: "call_1",
+							content: [{ type: "text", text: "result body" }],
+						},
+					],
+				},
+			]
+
+			await collect(handler, messages)
+			const input = mockResponsesCreate.mock.calls[0][0].input
+
+			const userImage = input[0].content.find((c: any) => c.type === "input_image")
+			expect(userImage.image_url).toBe("data:image/png;base64,AAAA")
+
+			const assistant = input.find((i: any) => i.role === "assistant")
+			expect(assistant.content[0]).toMatchObject({ type: "output_text", text: "sure thing" })
+
+			const toolOutput = input.find((i: any) => i.type === "function_call_output")
+			expect(toolOutput.output).toBe("result body")
+		})
+	})
 })
