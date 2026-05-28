@@ -22,6 +22,7 @@ import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
 import { useGroupedTasks } from "./useGroupedTasks"
 import { countAllSubtasks } from "./types"
+import type { TaskGroup, TimePeriod } from "./types"
 import TaskItem from "./TaskItem"
 import TaskGroupItem from "./TaskGroupItem"
 
@@ -30,6 +31,19 @@ type HistoryViewProps = {
 }
 
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
+
+type TimeGroupListItem =
+	| { type: "header"; label: string }
+	| { type: "group"; group: TaskGroup }
+
+const TIME_PERIOD_I18N_KEYS: Record<TimePeriod, string> = {
+	today: "history:timeGroup.today",
+	yesterday: "history:timeGroup.yesterday",
+	thisWeek: "history:timeGroup.thisWeek",
+	thisMonth: "history:timeGroup.thisMonth",
+	lastMonth: "history:timeGroup.lastMonth",
+	older: "history:timeGroup.older",
+}
 
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const {
@@ -45,13 +59,25 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const { t } = useAppTranslation()
 
 	// Use grouped tasks hook
-	const { groups, flatTasks, toggleExpand, isSearchMode } = useGroupedTasks(tasks, searchQuery)
+	const { groups, flatTasks, toggleExpand, isSearchMode, timeGroups } = useGroupedTasks(tasks, searchQuery)
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const [deleteSubtaskCount, setDeleteSubtaskCount] = useState<number>(0)
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
 	const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
 	const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState<boolean>(false)
+
+	// Flatten timeGroups into a mixed list for Virtuoso rendering
+	const timeGroupListItems = useMemo((): TimeGroupListItem[] => {
+		const items: TimeGroupListItem[] = []
+		for (const tg of timeGroups) {
+			items.push({ type: "header", label: t(TIME_PERIOD_I18N_KEYS[tg.period]) })
+			for (const group of tg.groups) {
+				items.push({ type: "group", group })
+			}
+		}
+		return items
+	}, [timeGroups, t])
 
 	// Get subtask count for a task (recursive total)
 	const getSubtaskCount = useMemo(() => {
@@ -279,10 +305,10 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						)}
 					/>
 				) : (
-					// Grouped mode: task groups with expandable subtasks
+					// Grouped mode: time-grouped sections with sticky headers
 					<Virtuoso
 						className="flex-1 overflow-y-scroll"
-						data={groups}
+						data={timeGroupListItems}
 						data-testid="virtuoso-container"
 						initialTopMostItemIndex={0}
 						components={{
@@ -290,21 +316,33 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
 							)),
 						}}
-						itemContent={(_index, group) => (
-							<TaskGroupItem
-								key={group.parent.id}
-								group={group}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(group.parent.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								onToggleExpand={() => toggleExpand(group.parent.id)}
-								onToggleSubtaskExpand={toggleExpand}
-								className="m-2"
-							/>
-						)}
+						itemContent={(_index, item) => {
+							if (item.type === "header") {
+								return (
+									<div
+										className="sticky top-0 z-10 bg-vscode-editor-background px-2 py-1.5 text-xs font-medium text-vscode-descriptionForeground uppercase tracking-wider border-b border-vscode-panel-border"
+										data-testid="time-group-header">
+										{item.label}
+									</div>
+								)
+							}
+							const group = item.group
+							return (
+								<TaskGroupItem
+									key={group.parent.id}
+									group={group}
+									variant="full"
+									showWorkspace={showAllWorkspaces}
+									isSelectionMode={isSelectionMode}
+									isSelected={selectedTaskIds.includes(group.parent.id)}
+									onToggleSelection={toggleTaskSelection}
+									onDelete={handleDelete}
+									onToggleExpand={() => toggleExpand(group.parent.id)}
+									onToggleSubtaskExpand={toggleExpand}
+									className="m-2"
+								/>
+							)
+						}}
 					/>
 				)}
 			</TabContent>

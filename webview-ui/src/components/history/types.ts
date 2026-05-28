@@ -45,6 +45,39 @@ export interface TaskGroup {
 	isExpanded: boolean
 }
 
+export type TimePeriod = "today" | "yesterday" | "thisWeek" | "thisMonth" | "lastMonth" | "older"
+
+/**
+ * Returns the time period bucket for a given timestamp.
+ * Pure function — exported for independent testing.
+ */
+export function getTimePeriod(ts: number): TimePeriod {
+	const date = new Date(ts)
+	const now = new Date()
+	const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+	const yesterday = new Date(today.getTime() - 86400000)
+	const weekAgo = new Date(today.getTime() - 7 * 86400000)
+	const monthStart = new Date(now.getFullYear(), now.getMonth(), 1)
+	const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1)
+
+	if (date >= today) return "today"
+	if (date >= yesterday) return "yesterday"
+	if (date >= weekAgo) return "thisWeek"
+	if (date >= monthStart) return "thisMonth"
+	if (date >= lastMonthStart) return "lastMonth"
+	return "older"
+}
+
+/**
+ * A group of tasks bucketed by time period.
+ */
+export interface TimeGroup {
+	/** The time period label */
+	period: TimePeriod
+	/** Task groups within this time period */
+	groups: TaskGroup[]
+}
+
 /**
  * Result from the useGroupedTasks hook
  */
@@ -57,4 +90,6 @@ export interface GroupedTasksResult {
 	toggleExpand: (taskId: string) => void
 	/** Whether search mode is active */
 	isSearchMode: boolean
+	/** Groups bucketed by time period - used in normal view */
+	timeGroups: TimeGroup[]
 }

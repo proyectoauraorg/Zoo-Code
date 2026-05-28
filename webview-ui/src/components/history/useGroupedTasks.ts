@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback } from "react"
 import type { HistoryItem } from "@roo-code/types"
-import type { DisplayHistoryItem, SubtaskTreeNode, TaskGroup, GroupedTasksResult } from "./types"
+import type { DisplayHistoryItem, SubtaskTreeNode, TaskGroup, TimeGroup, GroupedTasksResult } from "./types"
+import { getTimePeriod } from "./types"
 
 /**
  * Recursively builds a subtask tree node for the given task.
@@ -26,12 +27,46 @@ export function buildSubtree(
 }
 
 /**
+ * Ordered list of time periods for rendering.
+ */
+const TIME_PERIODS: Array<import("./types").TimePeriod> = [
+	"today",
+	"yesterday",
+	"thisWeek",
+	"thisMonth",
+	"lastMonth",
+	"older",
+]
+
+/**
+ * Groups an already-sorted (newest first) list of TaskGroups by time period.
+ * Preserves the relative order of groups within each time bucket.
+ */
+export function buildTimeGroups(groups: TaskGroup[]): TimeGroup[] {
+	const buckets = new Map<import("./types").TimePeriod, TaskGroup[]>()
+
+	for (const group of groups) {
+		const period = getTimePeriod(group.parent.ts)
+		const bucket = buckets.get(period) || []
+		bucket.push(group)
+		buckets.set(period, bucket)
+	}
+
+	return TIME_PERIODS
+		.filter((period) => buckets.has(period) && buckets.get(period)!.length > 0)
+		.map((period) => ({
+			period,
+			groups: buckets.get(period)!,
+		}))
+}
+
+/**
  * Hook to transform a flat task list into grouped structure based on parent-child relationships.
  * In search mode, returns a flat list with isSubtask flag for each item.
  *
  * @param tasks - The list of tasks to group
  * @param searchQuery - Current search query (empty string means not searching)
- * @returns GroupedTasksResult with groups, flatTasks, toggleExpand, and isSearchMode
+ * @returns GroupedTasksResult with groups, flatTasks, toggleExpand, isSearchMode, and timeGroups
  */
 export function useGroupedTasks(tasks: HistoryItem[], searchQuery: string): GroupedTasksResult {
 	const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set())
@@ -87,6 +122,14 @@ export function useGroupedTasks(tasks: HistoryItem[], searchQuery: string): Grou
 		return taskGroups
 	}, [tasks, taskMap, isSearchMode, expandedIds])
 
+	// Build time-grouped buckets from the flat groups list
+	const timeGroups = useMemo((): TimeGroup[] => {
+		if (isSearchMode) {
+			return []
+		}
+		return buildTimeGroups(groups)
+	}, [groups, isSearchMode])
+
 	// Flatten tasks for search mode with isSubtask flag
 	const flatTasks = useMemo((): DisplayHistoryItem[] | null => {
 		if (!isSearchMode) {
@@ -117,5 +160,6 @@ export function useGroupedTasks(tasks: HistoryItem[], searchQuery: string): Grou
 		flatTasks,
 		toggleExpand,
 		isSearchMode,
+		timeGroups,
 	}
 }
