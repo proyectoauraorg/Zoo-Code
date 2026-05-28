@@ -1423,7 +1423,7 @@ export const ChatRowContent = ({
 							<button
 								type="button"
 								onClick={handleToggleExpand}
-								aria-expanded={isExpanded}
+								aria-expanded={false}
 								className="flex items-center gap-2 py-0.5 cursor-pointer text-vscode-descriptionForeground hover:text-vscode-foreground bg-transparent border-none text-inherit w-full text-left"
 								data-testid="compact-tool-row"
 								title={t("chat:compactTool.expandHint")}>
