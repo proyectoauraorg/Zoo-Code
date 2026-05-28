@@ -71,5 +71,26 @@
 	"selectByWorkspace": "Seleccionar por espacio de trabajo",
 	"selectLast7Days": "Últimos 7 días",
 	"selectLast30Days": "Últimos 30 días",
-	"selectExpensive": "Seleccionar costosas (>$1)"
+	"selectExpensive": "Seleccionar costosas (>$1)",
+	"timeGroup": {
+		"today": "Hoy",
+		"yesterday": "Ayer",
+		"thisWeek": "Esta semana",
+		"thisMonth": "Este mes",
+		"lastMonth": "Mes pasado",
+		"older": "Anteriores"
+	},
+	"emptyTitle": "Sin tareas aún",
+	"emptyDescription": "Inicia una conversación y tus tareas aparecerán aquí.",
+	"emptySearchTitle": "Sin resultados",
+	"emptySearchDescription": "Intenta otro término de búsqueda o limpia la búsqueda actual.",
+	"clearSearch": "Limpiar búsqueda",
+	"searchingContent": "Buscando en contenido de mensajes...",
+	"loadingMore": "Cargando más...",
+	"endOfList": "Fin de la lista",
+	"errorLoading": "Error al cargar tareas",
+	"taskListItem": "Tarea: {{task}}",
+	"statusActive": "Activa",
+	"statusCompleted": "Completada",
+	"statusDelegated": "Delegada"
 }

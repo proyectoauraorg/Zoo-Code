@@ -1,13 +1,25 @@
 import React from "react"
-import { render, screen, fireEvent } from "@/utils/test-utils"
+import { render, screen, fireEvent, act } from "@/utils/test-utils"
 
 import { useExtensionState } from "@src/context/ExtensionStateContext"
+import { useHistoryPagination } from "../useHistoryPagination"
 
 import HistoryView from "../HistoryView"
-import { vscode } from "@/utils/vscode"
 
 vi.mock("@src/context/ExtensionStateContext")
 vi.mock("@/utils/vscode")
+vi.mock("../useHistoryPagination", () => ({
+	useHistoryPagination: vi.fn(() => ({
+		tasks: [],
+		isLoading: false,
+		hasMore: false,
+		loadMore: vi.fn(),
+		reset: vi.fn(),
+		error: null,
+	})),
+}))
+
+const mockUseHistoryPagination = vi.mocked(useHistoryPagination)
 
 // Mock react-virtuoso to render all items immediately (jsdom has no layout)
 vi.mock("react-virtuoso", () => ({
@@ -15,7 +27,7 @@ vi.mock("react-virtuoso", () => ({
 		data,
 		itemContent,
 		components,
-		...rest
+		..._rest
 	}: {
 		data: unknown[]
 		itemContent: (index: number, item: unknown) => React.ReactNode
@@ -88,6 +100,7 @@ vi.mock("@/utils/format", () => ({
 
 const mockTaskHistory = [
 	{
+		number: 1,
 		id: "1",
 		task: "Test task 1",
 		ts: Date.now(),
@@ -97,6 +110,7 @@ const mockTaskHistory = [
 		workspace: "/test/workspace",
 	},
 	{
+		number: 2,
 		id: "2",
 		task: "Test task 2",
 		ts: Date.now() + 1000,
@@ -106,6 +120,7 @@ const mockTaskHistory = [
 		workspace: "/test/workspace",
 	},
 	{
+		number: 3,
 		id: "3",
 		task: "Test task 3 in other workspace",
 		ts: Date.now() + 2000,
@@ -119,10 +134,23 @@ const mockTaskHistory = [
 describe("HistoryView", () => {
 	beforeEach(() => {
 		vi.clearAllMocks()
+		vi.useFakeTimers()
 		;(useExtensionState as ReturnType<typeof vi.fn>).mockReturnValue({
 			taskHistory: mockTaskHistory,
 			cwd: "/test/workspace",
 		})
+		mockUseHistoryPagination.mockReturnValue({
+			tasks: mockTaskHistory.filter((t) => t.workspace === "/test/workspace"),
+			isLoading: false,
+			hasMore: false,
+			loadMore: vi.fn(),
+			reset: vi.fn(),
+			error: null,
+		})
+	})
+
+	afterEach(() => {
+		vi.useRealTimers()
 	})
 
 	it("renders the history interface", () => {
@@ -182,9 +210,22 @@ describe("HistoryView", () => {
 			taskHistory: [],
 			cwd: "/test/workspace",
 		})
+		mockUseHistoryPagination.mockReturnValue({
+			tasks: [],
+			isLoading: false,
+			hasMore: false,
+			loadMore: vi.fn(),
+			reset: vi.fn(),
+			error: null,
+		})
 
 		const onDone = vi.fn()
 		render(<HistoryView onDone={onDone} />)
+
+		// Advance past the loading skeleton timeout (800ms)
+		act(() => {
+			vi.advanceTimersByTime(800)
+		})
 
 		// Should still render the search and controls
 		expect(screen.getByPlaceholderText("Search tasks...")).toBeInTheDocument()
@@ -196,6 +237,11 @@ describe("HistoryView", () => {
 	it("renders task groups for current workspace by default", () => {
 		const onDone = vi.fn()
 		render(<HistoryView onDone={onDone} />)
+
+		// Advance past the loading skeleton timeout (800ms)
+		act(() => {
+			vi.advanceTimersByTime(800)
+		})
 
 		// Should show tasks from current workspace only
 		expect(screen.getByText("Test task 1")).toBeInTheDocument()
@@ -249,6 +295,7 @@ describe("HistoryView", () => {
 	it("handles parent-child task relationships", () => {
 		const tasksWithChildren = [
 			{
+				number: 1,
 				id: "parent-1",
 				task: "Parent task",
 				ts: Date.now(),
@@ -258,6 +305,7 @@ describe("HistoryView", () => {
 				workspace: "/test/workspace",
 			},
 			{
+				number: 2,
 				id: "child-1",
 				task: "Child task",
 				ts: Date.now() - 1000,
@@ -273,9 +321,22 @@ describe("HistoryView", () => {
 			taskHistory: tasksWithChildren,
 			cwd: "/test/workspace",
 		})
+		mockUseHistoryPagination.mockReturnValue({
+			tasks: tasksWithChildren,
+			isLoading: false,
+			hasMore: false,
+			loadMore: vi.fn(),
+			reset: vi.fn(),
+			error: null,
+		})
 
 		const onDone = vi.fn()
 		render(<HistoryView onDone={onDone} />)
+
+		// Advance past the loading skeleton timeout (800ms)
+		act(() => {
+			vi.advanceTimersByTime(800)
+		})
 
 		// Parent should be visible (rendered by mocked Virtuoso)
 		expect(screen.getByText("Parent task")).toBeInTheDocument()

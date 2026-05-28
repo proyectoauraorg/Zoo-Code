@@ -855,6 +855,7 @@ export const webviewMessageHandler = async (
 		}
 		case "getHistoryPage": {
 			try {
+				await provider.taskHistoryStore.initialized
 				const { requestId, sortOption, showAllWorkspaces, cursor, pageSize } = message
 				const workspace = showAllWorkspaces ? undefined : (provider.getCurrentTask()?.cwd ?? provider.cwd)
 				const result = provider.taskHistoryStore.getPaginated({

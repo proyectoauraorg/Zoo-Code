@@ -1,6 +1,4 @@
-import { render, screen, fireEvent } from "@/utils/test-utils"
-
-import type { HistoryItem } from "@roo-code/types"
+import { render, screen } from "@/utils/test-utils"
 
 import TaskGroupItem from "../TaskGroupItem"
 import TaskItem from "../TaskItem"

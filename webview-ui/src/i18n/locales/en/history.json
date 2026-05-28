@@ -64,5 +64,26 @@
 	"selectByWorkspace": "Select by Workspace",
 	"selectLast7Days": "Last 7 Days",
 	"selectLast30Days": "Last 30 Days",
-	"selectExpensive": "Select Expensive (>$1)"
+	"selectExpensive": "Select Expensive (>$1)",
+	"timeGroup": {
+		"today": "Today",
+		"yesterday": "Yesterday",
+		"thisWeek": "This Week",
+		"thisMonth": "This Month",
+		"lastMonth": "Last Month",
+		"older": "Older"
+	},
+	"emptyTitle": "No tasks yet",
+	"emptyDescription": "Start a conversation and your tasks will appear here.",
+	"emptySearchTitle": "No results found",
+	"emptySearchDescription": "Try a different search term or clear the current search.",
+	"clearSearch": "Clear search",
+	"searchingContent": "Searching in message content...",
+	"loadingMore": "Loading more...",
+	"endOfList": "End of list",
+	"errorLoading": "Error loading tasks",
+	"taskListItem": "Task: {{task}}",
+	"statusActive": "Active",
+	"statusCompleted": "Completed",
+	"statusDelegated": "Delegated"
 }

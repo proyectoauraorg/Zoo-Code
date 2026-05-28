@@ -3,8 +3,9 @@ import { render, screen } from "@/utils/test-utils"
 
 import type { HistoryItem } from "@roo-code/types"
 
-import { useGroupedTasks, buildSubtree } from "../useGroupedTasks"
+import { useGroupedTasks } from "../useGroupedTasks"
 import { countAllSubtasks } from "../types"
+import type { SubtaskTreeNode } from "../types"
 import TaskItem from "../TaskItem"
 import type { DisplayHistoryItem } from "../types"
 
@@ -343,7 +344,7 @@ describe("Edge Cases — History system", () => {
 
 	describe("countAllSubtasks edge cases", () => {
 		it("handles very deep nesting (10 levels)", () => {
-			let nodes: ReturnType<typeof createMockSubtaskNode>[] = []
+			let nodes: SubtaskTreeNode[] = []
 			// Build from bottom up
 			for (let depth = 10; depth >= 1; depth--) {
 				nodes = [
