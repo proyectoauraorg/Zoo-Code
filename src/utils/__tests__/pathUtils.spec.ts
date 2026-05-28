@@ -165,4 +165,31 @@ describe("isPathOutsideWorkspace", () => {
 		mockWorkspace.folders = []
 		expect(isPathOutsideWorkspace(path.join(workspaceDir, "file.ts"))).toBe(true)
 	})
+
+	it("normalizes case on case-insensitive platforms so a differently-cased inside path is still inside (#241)", () => {
+		const originalPlatform = process.platform
+		Object.defineProperty(process, "platform", { value: "darwin", configurable: true })
+
+		const inside = path.join(workspaceDir, "File.ts")
+		fs.writeFileSync(inside, "x")
+
+		// On case-insensitive macOS/Windows, realpath can return a different case for the
+		// resolved file than VS Code registered for the workspace folder. Simulate that by
+		// upper-casing the "workspace" segment only for the target file's resolution.
+		const realNative = fs.realpathSync.native
+		const spy = vi.spyOn(fs.realpathSync, "native").mockImplementation(((p: string) => {
+			const resolved = realNative(p)
+			return p === inside
+				? resolved.replace(`${path.sep}workspace${path.sep}`, `${path.sep}WORKSPACE${path.sep}`)
+				: resolved
+		}) as typeof fs.realpathSync.native)
+
+		try {
+			// Without case normalization the case mismatch would wrongly report "outside".
+			expect(isPathOutsideWorkspace(inside)).toBe(false)
+		} finally {
+			spy.mockRestore()
+			Object.defineProperty(process, "platform", { value: originalPlatform, configurable: true })
+		}
+	})
 })

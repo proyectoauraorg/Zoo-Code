@@ -114,10 +114,17 @@ export abstract class BaseTool<TName extends ToolName> {
 		absolutePath: string,
 		allowSymlinksOutsideWorkspace?: boolean,
 	): Promise<boolean> {
-		const allow =
-			allowSymlinksOutsideWorkspace ??
-			(await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ??
-			false
+		let allow = allowSymlinksOutsideWorkspace
+		if (allow === undefined) {
+			try {
+				allow = (await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ?? false
+			} catch {
+				// The provider may have been torn down mid-operation, in which case
+				// `getState()` rejects. Don't abort the tool call — default to the safe
+				// (symlink-resolving, fail-closed) behavior instead.
+				allow = false
+			}
+		}
 		return isPathOutsideWorkspace(absolutePath, { allowSymlinksOutsideWorkspace: allow })
 	}
 

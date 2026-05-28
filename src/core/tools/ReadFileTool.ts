@@ -430,13 +430,22 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 	): Promise<void> {
 		if (filesToApprove.length === 0) return
 
+		// Read provider state once and pass the flag down, rather than firing a separate
+		// `getState()` lookup per file in the batch below (mirrors ListFilesTool).
+		let allowSymlinks = false
+		try {
+			allowSymlinks = (await task.providerRef.deref()?.getState())?.allowSymlinksOutsideWorkspace ?? false
+		} catch {
+			allowSymlinks = false
+		}
+
 		if (filesToApprove.length > 1) {
 			// Batch approval
 			const batchFiles = await Promise.all(
 				filesToApprove.map(async (fileResult) => {
 					const relPath = fileResult.path
 					const fullPath = path.resolve(task.cwd, relPath)
-					const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
+					const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath, allowSymlinks)
 					const readablePath = getReadablePath(task.cwd, relPath)
 
 					const lineSnippet = this.getLineSnippet(fileResult.entry!)
@@ -502,7 +511,7 @@ export class ReadFileTool extends BaseTool<"read_file"> {
 			const fileResult = filesToApprove[0]
 			const relPath = fileResult.path
 			const fullPath = path.resolve(task.cwd, relPath)
-			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
+			const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath, allowSymlinks)
 			const lineSnippet = this.getLineSnippet(fileResult.entry!)
 
 			const startLine = this.getStartLine(fileResult.entry!)

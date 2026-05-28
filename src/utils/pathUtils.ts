@@ -82,6 +82,14 @@ export function isPathOutsideWorkspace(
 		return true
 	}
 
+	// On case-insensitive filesystems (macOS APFS/HFS+, Windows) `realpath` may return a
+	// different case than VS Code registered for the workspace folder, which would make a
+	// path that is actually inside the workspace compare as "outside" (a false negative on
+	// the security boundary). Normalize case before comparing on those platforms only.
+	const caseInsensitive = process.platform === "darwin" || process.platform === "win32"
+	const normalize = (p: string) => (caseInsensitive ? p.toLowerCase() : p)
+	const target = normalize(absolutePath)
+
 	// Check if the path is within any workspace folder
 	return !vscode.workspace.workspaceFolders.some((folder) => {
 		// Resolve the workspace folder too, in case it is itself reached via a symlink.
@@ -93,6 +101,7 @@ export function isPathOutsideWorkspace(
 			return false
 		}
 		// Path is inside a workspace if it equals the workspace path or is a subfolder
-		return absolutePath === folderPath || absolutePath.startsWith(folderPath + path.sep)
+		const base = normalize(folderPath)
+		return target === base || target.startsWith(base + path.sep)
 	})
 }

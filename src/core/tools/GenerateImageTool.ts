@@ -82,6 +82,22 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 				return
 			}
 
+			// Apply the workspace-boundary check to the input image too (#169): a symlink
+			// living inside the workspace but pointing outside it could otherwise be read
+			// and base64-encoded/forwarded upstream, bypassing the boundary.
+			const inputIsOutsideWorkspace = await this.resolveIsOutsideWorkspace(
+				task,
+				inputImageFullPath,
+				state?.allowSymlinksOutsideWorkspace,
+			)
+			if (inputIsOutsideWorkspace) {
+				const message = `Input image is outside the workspace: ${getReadablePath(task.cwd, inputImagePath)}`
+				await task.say("error", message)
+				task.didToolFailInCurrentTurn = true
+				pushToolResult(formatResponse.toolError(message))
+				return
+			}
+
 			try {
 				const imageBuffer = await fs.readFile(inputImageFullPath)
 				const imageExtension = path.extname(inputImageFullPath).toLowerCase().replace(".", "")
@@ -162,7 +178,11 @@ export class GenerateImageTool extends BaseTool<"generate_image"> {
 		}
 
 		const fullPath = path.resolve(task.cwd, relPath)
-		const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(task, fullPath)
+		const isOutsideWorkspace = await this.resolveIsOutsideWorkspace(
+			task,
+			fullPath,
+			state?.allowSymlinksOutsideWorkspace,
+		)
 
 		const sharedMessageProps = {
 			tool: "generateImage" as const,
