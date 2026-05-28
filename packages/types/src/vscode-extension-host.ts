@@ -99,6 +99,8 @@ export interface ExtensionMessage {
 		| "folderSelected"
 		| "skills"
 		| "fileContent"
+		| "historyContentSearchResults"
+		| "historyPageResponse"
 	text?: string
 	/** For fileContent: { path, content, error? } */
 	fileContent?: { path: string; content: string | null; error?: string }
@@ -185,6 +187,11 @@ export interface ExtensionMessage {
 	taskHistory?: HistoryItem[] // For taskHistoryUpdated: full sorted task history
 	/** For taskHistoryItemUpdated: single updated/added history item */
 	taskHistoryItem?: HistoryItem
+	// Pagination response for task history
+	historyPageTasks?: HistoryItem[] // For historyPageResponse
+	historyPageNextCursor?: string // For historyPageResponse: undefined if no more pages
+	historyPageHasMore?: boolean // For historyPageResponse
+	historyPageRequestId?: string // For historyPageResponse: correlates with the request
 	// Worktree response properties
 	worktrees?: Array<{
 		path: string
@@ -575,6 +582,9 @@ export interface WebviewMessage {
 		| "removeInstalledMarketplaceItem"
 		| "marketplaceInstallResult"
 		| "shareTaskSuccess"
+		// Deep search messages
+		| "searchHistoryContent"
+		| "getHistoryPage"
 		// Skills messages
 		| "requestSkills"
 		| "createSkill"
@@ -644,6 +654,11 @@ export interface WebviewMessage {
 	visibility?: ShareVisibility // For share visibility
 	hasContent?: boolean // For checkRulesDirectoryResult
 	checkOnly?: boolean // For deleteCustomMode check
+	// Pagination request for task history
+	sortOption?: "newest" | "oldest" | "mostExpensive" | "mostTokens" // For getHistoryPage
+	showAllWorkspaces?: boolean // For getHistoryPage
+	cursor?: string // For getHistoryPage: undefined for first page
+	pageSize?: number // For getHistoryPage: default 50
 	upsellId?: string // For dismissUpsell
 	list?: string[] // For dismissedUpsells response
 	organizationId?: string | null // For organization switching

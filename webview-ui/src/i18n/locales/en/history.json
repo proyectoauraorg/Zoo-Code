@@ -57,5 +57,7 @@
 	"deepSearch": "Search in messages",
 	"searchingContent": "Searching messages...",
 	"contentMatch": "Content match",
-	"noResults": "No results found"
+	"noResults": "No results found",
+	"loadingMore": "Loading more...",
+	"endOfList": "End of list"
 }

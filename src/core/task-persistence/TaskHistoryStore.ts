@@ -149,6 +149,73 @@ export class TaskHistoryStore {
 		return this.getAll().filter((item) => item.workspace === workspace)
 	}
 
+	/**
+	 * Sort history items by the given option.
+	 *
+	 * Returns a new sorted array without mutating the input.
+	 */
+	static sortItems(
+		items: HistoryItem[],
+		sortOption: "newest" | "oldest" | "mostExpensive" | "mostTokens",
+	): HistoryItem[] {
+		const sorted = [...items]
+
+		switch (sortOption) {
+			case "oldest":
+				return sorted.sort((a, b) => a.ts - b.ts)
+			case "mostExpensive":
+				return sorted.sort((a, b) => b.totalCost - a.totalCost)
+			case "mostTokens":
+				return sorted.sort((a, b) => b.tokensIn + b.tokensOut - (a.tokensIn + a.tokensOut))
+			case "newest":
+			default:
+				return sorted.sort((a, b) => b.ts - a.ts)
+		}
+	}
+
+	/**
+	 * Get a paginated page of history items with cursor-based pagination.
+	 *
+	 * Uses the last item's `id` from the previous page as the cursor.
+	 * When `workspace` is provided, only items matching that workspace are returned.
+	 */
+	getPaginated(options?: {
+		sortOption?: "newest" | "oldest" | "mostExpensive" | "mostTokens"
+		workspace?: string
+		cursor?: string
+		pageSize?: number
+	}): { items: HistoryItem[]; nextCursor?: string; hasMore: boolean } {
+		const { sortOption = "newest", workspace, cursor, pageSize = 50 } = options ?? {}
+
+		let items = Array.from(this.cache.values())
+
+		// Filter by workspace if specified
+		if (workspace) {
+			items = items.filter((item) => item.workspace === workspace)
+		}
+
+		// Sort
+		items = TaskHistoryStore.sortItems(items, sortOption)
+
+		// Find cursor position
+		let startIndex = 0
+
+		if (cursor) {
+			const cursorIndex = items.findIndex((item) => item.id === cursor)
+
+			if (cursorIndex >= 0) {
+				startIndex = cursorIndex + 1
+			}
+		}
+
+		// Slice
+		const page = items.slice(startIndex, startIndex + pageSize)
+		const hasMore = startIndex + pageSize < items.length
+		const nextCursor = hasMore && page.length > 0 ? page[page.length - 1].id : undefined
+
+		return { items: page, nextCursor, hasMore }
+	}
+
 	// ────────────────────────────── Mutations ──────────────────────────────
 
 	/**
