@@ -75,6 +75,11 @@ const BaseConfigSchema = z.object({
 	alwaysAllow: z.array(z.string()).default([]),
 	watchPaths: z.array(z.string()).optional(), // paths to watch for changes and restart server
 	disabledTools: z.array(z.string()).default([]),
+	oauth: z
+		.object({
+			clientId: z.string().optional(),
+		})
+		.optional(),
 })
 
 // Custom error messages for better user feedback
@@ -807,6 +812,7 @@ export class McpHub {
 
 				const authProvider = await McpOAuthClientProvider.create(configInjected.url, this.secretStorage, name, {
 					skipDiscovery,
+					clientId: configInjected.oauth?.clientId,
 				})
 
 				// Pre-register the OAuth client so the SDK can skip its own

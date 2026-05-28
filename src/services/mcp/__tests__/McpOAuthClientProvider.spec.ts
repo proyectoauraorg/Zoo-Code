@@ -849,4 +849,49 @@ describe("McpOAuthClientProvider", () => {
 			await provider.close()
 		})
 	})
+
+	describe("static clientId support", () => {
+		it("should use static clientId instead of performing DCR", async () => {
+			const secretStorage = createMockSecretStorage()
+			const provider = await McpOAuthClientProvider.create(
+				"https://example.com/mcp",
+				secretStorage,
+				"test-server",
+				{ clientId: "my-static-client-id" },
+			)
+
+			await provider.registerClientIfNeeded()
+
+			const info = await provider.clientInformation()
+			expect(info?.client_id).toBe("my-static-client-id")
+			await provider.close()
+		})
+
+		it("should use static clientId even when cached data exists", async () => {
+			setupCallbackServerMock()
+			const secretStorage = createMockSecretStorage()
+
+			await secretStorage.saveOAuthData("https://example.com/mcp", {
+				tokens: { access_token: "cached-token", token_type: "Bearer" },
+				expires_at: Date.now() + 3600_000,
+				client_info: {
+					client_id: "cached-client-id",
+					redirect_uris: ["http://localhost:0/callback"],
+				},
+			})
+
+			const provider = await McpOAuthClientProvider.create(
+				"https://example.com/mcp",
+				secretStorage,
+				"test-server",
+				{ clientId: "my-static-client-id" },
+			)
+
+			await provider.registerClientIfNeeded()
+
+			const info = await provider.clientInformation()
+			expect(info?.client_id).toBe("my-static-client-id")
+			await provider.close()
+		})
+	})
 })

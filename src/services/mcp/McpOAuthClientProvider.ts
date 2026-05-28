@@ -86,6 +86,7 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 		private readonly _authServerMeta: Record<string, any> | null,
 		private readonly _resourceIndicator: string | null,
 		private readonly _clientName: string,
+		private readonly _staticClientId?: string,
 	) {}
 
 	/**
@@ -102,7 +103,7 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 		serverUrl: string,
 		secretStorage: SecretStorageService,
 		serverName?: string,
-		options?: { skipDiscovery?: boolean },
+		options?: { skipDiscovery?: boolean; clientId?: string },
 	): Promise<McpOAuthClientProvider> {
 		let authServerMeta: Record<string, any> | null = null
 		let resourceIndicator: string | null = null
@@ -151,6 +152,7 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 			authServerMeta,
 			resourceIndicator,
 			serverName || "Roo Code",
+			options?.clientId,
 		)
 	}
 
@@ -227,6 +229,17 @@ export class McpOAuthClientProvider implements OAuthClientProvider {
 	 */
 	async registerClientIfNeeded(): Promise<void> {
 		if (this._clientInfo) return // already registered
+
+		// If a static clientId was provided (e.g. from mcp.json oauth.clientId),
+		// use it directly instead of performing Dynamic Client Registration.
+		// This enables connections to OAuth servers that don't support DCR.
+		if (this._staticClientId) {
+			this._clientInfo = {
+				client_id: this._staticClientId,
+				redirect_uris: [this.redirectUrl],
+			}
+			return
+		}
 
 		// Check if we have a cached client_id from previous registration
 		const cachedData = await this._secretStorage.getOAuthData(this._serverUrl)
