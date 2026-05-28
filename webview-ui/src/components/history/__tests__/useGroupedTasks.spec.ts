@@ -397,6 +397,40 @@ describe("useGroupedTasks", () => {
 			expect(result.current.groups[0].isExpanded).toBe(true)
 		})
 	})
+
+	it("handles circular parentTaskId references without infinite loop", () => {
+		// A is parent of B, B is parent of A — cycle
+		const taskA = createMockTask({
+			id: "task-a",
+			task: "Task A",
+			parentTaskId: "task-b",
+			ts: new Date("2024-01-15T12:00:00").getTime(),
+		})
+		const taskB = createMockTask({
+			id: "task-b",
+			task: "Task B",
+			parentTaskId: "task-a",
+			ts: new Date("2024-01-16T12:00:00").getTime(),
+		})
+
+		// Both have parentTaskId pointing to each other, but the hook's childrenMap
+		// only adds children when parent exists in taskMap. Since both exist,
+		// A becomes child of B, and B becomes child of A. Neither is a root.
+		// The root filter checks !taskMap.has(task.parentTaskId) — both exist,
+		// so both are filtered as non-roots → groups should be empty.
+		// BUT: the childrenMap will be: A→children of A (tasks with parentTaskId="task-a"=taskB), B→children of B (taskA)
+		// Since both have parentTaskId that exists in taskMap, neither is root.
+		const { result } = renderHook(() => useGroupedTasks([taskA, taskB], ""))
+
+		// Both tasks reference each other; neither is promoted to root since both parents exist
+		// The function should complete without hanging (no infinite recursion)
+		expect(result.current.groups).toHaveLength(0)
+
+		// In search mode, both should appear as subtasks
+		const { result: searchResult } = renderHook(() => useGroupedTasks([taskA, taskB], "search"))
+		expect(searchResult.current.flatTasks).toHaveLength(2)
+		expect(searchResult.current.flatTasks?.every((t) => t.isSubtask)).toBe(true)
+	})
 })
 
 describe("buildSubtree", () => {

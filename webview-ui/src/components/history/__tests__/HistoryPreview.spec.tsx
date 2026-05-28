@@ -1,10 +1,12 @@
-import { render, screen } from "@/utils/test-utils"
+import { render, screen, fireEvent } from "@/utils/test-utils"
 
 import type { HistoryItem } from "@roo-code/types"
 
 import HistoryPreview from "../HistoryPreview"
 import type { TaskGroup } from "../types"
+import { vscode } from "@src/utils/vscode"
 
+vi.mock("@src/utils/vscode")
 vi.mock("../useTaskSearch")
 vi.mock("../useGroupedTasks")
 
@@ -331,5 +333,70 @@ describe("HistoryPreview", () => {
 
 		// Verify toggleExpand was called with the parent id
 		expect(mockToggleExpand).toHaveBeenCalledWith("task-1")
+	})
+
+	it("sends switchTab message when View All is clicked", () => {
+		const mockTasks2 = mockTasks.slice(0, 2)
+		mockUseTaskSearch.mockReturnValue({
+			tasks: mockTasks2,
+			searchQuery: "",
+			setSearchQuery: vi.fn(),
+			sortOption: "newest",
+			setSortOption: vi.fn(),
+			lastNonRelevantSort: null,
+			setLastNonRelevantSort: vi.fn(),
+			showAllWorkspaces: false,
+			setShowAllWorkspaces: vi.fn(),
+		})
+
+		const mockGroups2 = createMockGroups(mockTasks2)
+		mockUseGroupedTasks.mockReturnValue({
+			groups: mockGroups2,
+			flatTasks: null,
+			toggleExpand: vi.fn(),
+			isSearchMode: false,
+		})
+
+		render(<HistoryPreview />)
+
+		const viewAllButton = screen.getByText("history:viewAllHistory")
+		fireEvent.click(viewAllButton)
+
+		expect(vscode.postMessage).toHaveBeenCalledWith({
+			type: "switchTab",
+			tab: "history",
+		})
+	})
+
+	it("renders with compact variant for TaskGroupItem", () => {
+		const oneTask = mockTasks.slice(0, 1)
+		mockUseTaskSearch.mockReturnValue({
+			tasks: oneTask,
+			searchQuery: "",
+			setSearchQuery: vi.fn(),
+			sortOption: "newest",
+			setSortOption: vi.fn(),
+			lastNonRelevantSort: null,
+			setLastNonRelevantSort: vi.fn(),
+			showAllWorkspaces: false,
+			setShowAllWorkspaces: vi.fn(),
+		})
+
+		const mockGroups = createMockGroups(oneTask)
+		mockUseGroupedTasks.mockReturnValue({
+			groups: mockGroups,
+			flatTasks: null,
+			toggleExpand: vi.fn(),
+			isSearchMode: false,
+		})
+
+		render(<HistoryPreview />)
+
+		expect(mockTaskGroupItem).toHaveBeenCalledWith(
+			expect.objectContaining({
+				variant: "compact",
+			}),
+			expect.anything(),
+		)
 	})
 })

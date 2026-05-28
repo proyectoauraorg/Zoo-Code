@@ -285,3 +285,143 @@ describe("useTaskSearch", () => {
 		expect(result.current.sortOption).toBe("mostRelevant")
 	})
 })
+
+describe("fuzzy search with fzf", () => {
+	it("finds partial matches", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+			result.current.setSearchQuery("unit")
+		})
+
+		// "Write unit tests" should match
+		expect(result.current.tasks.length).toBeGreaterThanOrEqual(1)
+		expect(result.current.tasks.some((t) => t.id === "task-2")).toBe(true)
+	})
+
+	it("finds results with typos (fuzzy matching)", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+			result.current.setSearchQuery("autentication") // typo for "authentication"
+		})
+
+		// fzf should still find "Fix bug in authentication"
+		expect(result.current.tasks.length).toBeGreaterThanOrEqual(1)
+		expect(result.current.tasks.some((t) => t.id === "task-3")).toBe(true)
+	})
+
+	it("finds exact matches", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+			result.current.setSearchQuery("Fix bug in authentication")
+		})
+
+		expect(result.current.tasks).toHaveLength(1)
+		expect(result.current.tasks[0].id).toBe("task-3")
+	})
+
+	it("adds highlight field to search results", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+			result.current.setSearchQuery("React")
+		})
+
+		expect(result.current.tasks).toHaveLength(1)
+		expect((result.current.tasks[0] as any).highlight).toContain("<mark>")
+	})
+
+	it("returns results in fzf relevance order when using mostRelevant sort", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+			result.current.setSearchQuery("test")
+			result.current.setSortOption("mostRelevant")
+		})
+
+		// "Write unit tests" is the most relevant for "test"
+		expect(result.current.tasks.length).toBeGreaterThanOrEqual(1)
+		expect(result.current.tasks[0].id).toBe("task-2")
+	})
+})
+
+describe("workspace toggle interaction", () => {
+	it("toggling showAllWorkspaces changes visible task count", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		expect(result.current.showAllWorkspaces).toBe(false)
+		expect(result.current.tasks).toHaveLength(2) // project1 only
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+		})
+
+		expect(result.current.showAllWorkspaces).toBe(true)
+		expect(result.current.tasks).toHaveLength(3) // all workspaces
+
+		act(() => {
+			result.current.setShowAllWorkspaces(false)
+		})
+
+		expect(result.current.showAllWorkspaces).toBe(false)
+		expect(result.current.tasks).toHaveLength(2)
+	})
+
+	it("workspace filter interacts correctly with search", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(false)
+			result.current.setSearchQuery("authentication")
+		})
+
+		// "Fix bug in authentication" is in project2, not visible in current workspace
+		expect(result.current.tasks).toHaveLength(0)
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+		})
+
+		expect(result.current.tasks).toHaveLength(1)
+		expect(result.current.tasks[0].id).toBe("task-3")
+	})
+})
+
+describe("sort option interaction", () => {
+	it("switching sort option updates task order", () => {
+		const { result } = renderHook(() => useTaskSearch())
+
+		act(() => {
+			result.current.setShowAllWorkspaces(true)
+		})
+
+		// Default: newest
+		expect(result.current.sortOption).toBe("newest")
+		expect(result.current.tasks[0].id).toBe("task-2")
+
+		// Switch to oldest
+		act(() => {
+			result.current.setSortOption("oldest")
+		})
+		expect(result.current.tasks[0].id).toBe("task-3")
+
+		// Switch to mostExpensive
+		act(() => {
+			result.current.setSortOption("mostExpensive")
+		})
+		expect(result.current.tasks[0].id).toBe("task-3") // $0.05
+
+		// Switch to mostTokens
+		act(() => {
+			result.current.setSortOption("mostTokens")
+		})
+		expect(result.current.tasks[0].id).toBe("task-2") // 335 tokens
+	})
+})
