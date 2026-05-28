@@ -20,6 +20,7 @@ export const ExportButton = ({ itemId }: { itemId: string }) => {
 				data-testid="export"
 				variant="ghost"
 				size="icon"
+				aria-label={t("history:exportTask")}
 				className="group-hover:opacity-100 opacity-50 transition-opacity"
 				onClick={handleExportClick}>
 				<span className="codicon codicon-desktop-download scale-80" />

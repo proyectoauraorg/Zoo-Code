@@ -1,5 +1,5 @@
-import React, { memo, useState, useMemo, useCallback } from "react"
-import { ArrowLeft } from "lucide-react"
+import React, { memo, useState, useMemo, useCallback, useEffect } from "react"
+import { ArrowLeft, Inbox, SearchX } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import { Virtuoso } from "react-virtuoso"
@@ -26,6 +26,7 @@ import { countAllSubtasks } from "./types"
 import type { TaskGroup, TimePeriod } from "./types"
 import TaskItem from "./TaskItem"
 import TaskGroupItem from "./TaskGroupItem"
+import HistorySkeleton from "./HistorySkeleton"
 
 type HistoryViewProps = {
 	onDone: () => void
@@ -57,6 +58,14 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		isDeepSearching,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
+
+	const [isLoading, setIsLoading] = useState(true)
+
+	// Simulate loading state for skeleton
+	useEffect(() => {
+		const timer = setTimeout(() => setIsLoading(false), 800)
+		return () => clearTimeout(timer)
+	}, [])
 
 	// Server-side pagination for non-search sort options
 	const isServerSidePagination = sortOption !== "mostRelevant"
@@ -299,7 +308,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 										? t("history:deselectAll")
 										: t("history:selectAll")}
 								</span>
-								<span className="ml-auto text-vscode-descriptionForeground text-xs">
+								<span className="ml-auto text-vscode-descriptionForeground text-xs" aria-live="polite">
 									{t("history:selectedItems", {
 										selected: selectedTaskIds.length,
 										total: tasks.length,
@@ -312,7 +321,27 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			</TabHeader>
 
 			<TabContent className="px-2 py-0">
-				{isSearchMode && flatTasks ? (
+				{isLoading ? (
+					<HistorySkeleton />
+				) : tasks.length === 0 && !searchQuery ? (
+					<div className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground" data-testid="history-empty-state">
+						<Inbox className="size-12 mb-4 opacity-50" />
+						<p className="text-lg font-medium">{t("history:emptyTitle")}</p>
+						<p className="text-sm mt-1">{t("history:emptyDescription")}</p>
+					</div>
+				) : tasks.length === 0 && searchQuery ? (
+					<div className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground" data-testid="history-empty-search-state">
+						<SearchX className="size-12 mb-4 opacity-50" />
+						<p className="text-lg font-medium">{t("history:emptySearchTitle")}</p>
+						<p className="text-sm mt-1">{t("history:emptySearchDescription")}</p>
+						<button
+							className="mt-3 text-sm text-vscode-textLink-foreground hover:underline cursor-pointer"
+							onClick={() => setSearchQuery("")}
+							data-testid="clear-search-button">
+							{t("history:clearSearch")}
+						</button>
+					</div>
+				) : isSearchMode && flatTasks ? (
 					// Search mode: flat list with subtask prefix
 					<Virtuoso
 						className="flex-1 overflow-y-scroll"
@@ -321,21 +350,23 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						initialTopMostItemIndex={0}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div {...props} ref={ref} data-testid="virtuoso-item-list" role="list" />
 							)),
 						}}
 						itemContent={(_index, item) => (
-							<TaskItem
-								key={item.id}
-								item={item}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(item.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								className="m-2"
-							/>
+							<div role="listitem">
+								<TaskItem
+									key={item.id}
+									item={item}
+									variant="full"
+									showWorkspace={showAllWorkspaces}
+									isSelectionMode={isSelectionMode}
+									isSelected={selectedTaskIds.includes(item.id)}
+									onToggleSelection={toggleTaskSelection}
+									onDelete={handleDelete}
+									className="m-2"
+								/>
+							</div>
 						)}
 					/>
 				) : (
@@ -349,7 +380,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						overscan={200}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div {...props} ref={ref} data-testid="virtuoso-item-list" role="list" />
 							)),
 							Footer: () => {
 								if (!isServerSidePagination) return null
@@ -401,19 +432,21 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							}
 							const group = item.group
 							return (
-								<TaskGroupItem
-									key={group.parent.id}
-									group={group}
-									variant="full"
-									showWorkspace={showAllWorkspaces}
-									isSelectionMode={isSelectionMode}
-									isSelected={selectedTaskIds.includes(group.parent.id)}
-									onToggleSelection={toggleTaskSelection}
-									onDelete={handleDelete}
-									onToggleExpand={() => toggleExpand(group.parent.id)}
-									onToggleSubtaskExpand={toggleExpand}
-									className="m-2"
-								/>
+								<div role="listitem">
+									<TaskGroupItem
+										key={group.parent.id}
+										group={group}
+										variant="full"
+										showWorkspace={showAllWorkspaces}
+										isSelectionMode={isSelectionMode}
+										isSelected={selectedTaskIds.includes(group.parent.id)}
+										onToggleSelection={toggleTaskSelection}
+										onDelete={handleDelete}
+										onToggleExpand={() => toggleExpand(group.parent.id)}
+										onToggleSubtaskExpand={toggleExpand}
+										className="m-2"
+									/>
+								</div>
 							)
 						}}
 					/>
@@ -422,7 +455,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 
 			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
 			{isSelectionMode && selectedTaskIds.length > 0 && (
-				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center">
+				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center transition-all duration-300 translate-y-0 opacity-100">
 					<div className="text-vscode-foreground">
 						{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
 					</div>

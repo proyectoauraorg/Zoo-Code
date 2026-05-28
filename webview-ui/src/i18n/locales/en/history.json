@@ -59,5 +59,12 @@
 	"contentMatch": "Content match",
 	"noResults": "No results found",
 	"loadingMore": "Loading more...",
-	"endOfList": "End of list"
+	"endOfList": "End of list",
+	"emptyTitle": "No tasks yet",
+	"emptyDescription": "Start a conversation to see your history here",
+	"emptySearchTitle": "No tasks match your search",
+	"emptySearchDescription": "Try a different search term",
+	"clearSearch": "Clear search",
+	"taskList": "Task list",
+	"taskListItem": "Task item"
 }
