@@ -32,9 +32,7 @@ type HistoryViewProps = {
 
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
-type TimeGroupListItem =
-	| { type: "header"; label: string }
-	| { type: "group"; group: TaskGroup }
+type TimeGroupListItem = { type: "header"; label: string } | { type: "group"; group: TaskGroup }
 
 const TIME_PERIOD_I18N_KEYS: Record<TimePeriod, string> = {
 	today: "history:timeGroup.today",
@@ -55,6 +53,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		isDeepSearching,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
 
@@ -182,6 +181,14 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							/>
 						)}
 					</VSCodeTextField>
+					{isDeepSearching && (
+						<div
+							className="flex items-center gap-2 text-vscode-descriptionForeground text-xs py-1"
+							data-testid="deep-search-loading">
+							<span className="codicon codicon-loading codicon-modifier-spin" />
+							<span>{t("history:searchingContent")}</span>
+						</div>
+					)}
 					<div className="flex gap-2">
 						<Select
 							value={showAllWorkspaces ? "all" : "current"}

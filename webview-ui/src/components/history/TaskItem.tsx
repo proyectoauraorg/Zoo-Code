@@ -102,6 +102,15 @@ const TaskItem = ({
 						<ArrowRight className="size-4 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity" />
 					</div>
 
+					{item.isDeepMatch && item.deepMatchSnippet && (
+						<div
+							className="flex items-center gap-1 text-vscode-descriptionForeground text-xs mt-1"
+							data-testid="deep-match-snippet">
+							<span className="codicon codicon-search text-[10px]" />
+							<span className="truncate">{item.deepMatchSnippet}</span>
+						</div>
+					)}
+
 					{showWorkspace && item.workspace && (
 						<div className="flex items-center font-mono gap-1 text-vscode-descriptionForeground text-xs mt-1">
 							<Folder className="size-3" />

@@ -53,5 +53,9 @@
 	"timeGroup.thisWeek": "This Week",
 	"timeGroup.thisMonth": "This Month",
 	"timeGroup.lastMonth": "Last Month",
-	"timeGroup.older": "Older"
+	"timeGroup.older": "Older",
+	"deepSearch": "Search in messages",
+	"searchingContent": "Searching messages...",
+	"contentMatch": "Content match",
+	"noResults": "No results found"
 }

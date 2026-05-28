@@ -8,6 +8,10 @@ export interface DisplayHistoryItem extends HistoryItem {
 	highlight?: string
 	/** Whether this task is a subtask (has a parent in the current task list) */
 	isSubtask?: boolean
+	/** Whether this item matched via deep content search */
+	isDeepMatch?: boolean
+	/** Snippet from deep content search showing the matched context */
+	deepMatchSnippet?: string
 }
 
 /**
