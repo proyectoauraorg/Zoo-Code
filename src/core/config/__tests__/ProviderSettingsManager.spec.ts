@@ -6,6 +6,37 @@ import type { ProviderSettings } from "@roo-code/types"
 
 import { ProviderSettingsManager, ProviderProfiles, SyncCloudProfilesResult } from "../ProviderSettingsManager"
 
+// `export()` builds an API handler per profile to read model capabilities. Mock
+// buildApiHandler so the Export tests exercise the token-field filtering logic
+// deterministically, driven by the REAL provider model definitions (pulled from
+// @roo-code/types via importActual) rather than instantiating live handlers.
+//
+// This also keeps the suite isolated from sibling specs that mock "../../../api"
+// (e.g. importExport.spec): under Windows CI's `singleFork` pool an un-isolated
+// module mock from another file could otherwise leak in here, making
+// supportsMaxTokens read as undefined and silently dropping modelMaxTokens. #161 / #274.
+vi.mock("../../../api", async () => {
+	const types = await vi.importActual<typeof import("@roo-code/types")>("@roo-code/types")
+	const zaiModels = { ...types.internationalZAiModels, ...types.mainlandZAiModels } as Record<string, unknown>
+	const anthropicModels = types.anthropicModels as Record<string, unknown>
+	const modelInfoFor = (config: { apiProvider?: string; apiModelId?: string }) => {
+		const id = config?.apiModelId ?? ""
+		switch (config?.apiProvider) {
+			case "zai":
+				return zaiModels[id] ?? {}
+			case "anthropic":
+				return anthropicModels[id] ?? {}
+			default:
+				return {}
+		}
+	}
+	return {
+		buildApiHandler: (config: any) => ({
+			getModel: () => ({ id: config?.apiModelId ?? "", info: modelInfoFor(config) }),
+		}),
+	}
+})
+
 // Mock VSCode ExtensionContext
 const mockSecrets = {
 	get: vi.fn(),
