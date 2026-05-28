@@ -16,14 +16,11 @@ import { searchFilesTool, SearchFilesTool } from "../SearchFilesTool"
 import { regexSearchFiles } from "../../../services/ripgrep"
 import { isPathOutsideWorkspace } from "../../../utils/pathUtils"
 
-vi.mock("path", async () => {
-	const originalPath = await vi.importActual("path")
-	return {
-		default: originalPath,
-		...originalPath,
-		resolve: vi.fn().mockImplementation((...args: string[]) => args.join("/")),
-	}
-})
+// NOTE: we intentionally do NOT mock the `path` builtin. Mocking it globally is
+// fragile under Windows CI's singleFork pool (the override can be lost across files,
+// leaving the real `path.resolve` to produce backslash paths and fail "/"-based
+// assertions — a Windows-only flake). Assertions below derive the expected resolved
+// path with the real `path.resolve`, so they hold on every platform.
 
 vi.mock("../../../services/ripgrep", () => ({
 	regexSearchFiles: vi.fn(),
@@ -113,10 +110,9 @@ describe("SearchFilesTool", () => {
 
 			await searchFilesTool.execute({ path: "src", regex: "matching" }, mockTask as any, callbacks)
 
-			// path.resolve is mocked to join args, so cwd + "src" = "/test/workspace/src"
 			expect(mockedRegexSearchFiles).toHaveBeenCalledWith(
-				"/test/workspace",
-				"/test/workspace/src",
+				mockTask.cwd,
+				path.resolve(mockTask.cwd, "src"),
 				"matching",
 				undefined,
 				mockTask.rooIgnoreController,
@@ -135,10 +131,9 @@ describe("SearchFilesTool", () => {
 				callbacks,
 			)
 
-			// path.resolve is mocked to join args, so cwd + "src" = "/test/workspace/src"
 			expect(mockedRegexSearchFiles).toHaveBeenCalledWith(
-				"/test/workspace",
-				"/test/workspace/src",
+				mockTask.cwd,
+				path.resolve(mockTask.cwd, "src"),
 				"test",
 				"*.ts",
 				mockTask.rooIgnoreController,
