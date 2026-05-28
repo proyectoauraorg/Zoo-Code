@@ -1,30 +1,36 @@
-import { vscode } from "@/utils/vscode"
+import { useState, useCallback } from "react"
+import type { HistoryItem } from "@roo-code/types"
+
 import { Button, StandardTooltip } from "@/components/ui"
 import { useAppTranslation } from "@/i18n/TranslationContext"
-import { useCallback } from "react"
+import { ExportDialog } from "./ExportDialog"
 
-export const ExportButton = ({ itemId }: { itemId: string }) => {
+interface ExportButtonProps {
+	item: HistoryItem
+}
+
+export const ExportButton = ({ item }: ExportButtonProps) => {
 	const { t } = useAppTranslation()
+	const [showDialog, setShowDialog] = useState(false)
 
-	const handleExportClick = useCallback(
-		(e: React.MouseEvent) => {
-			e.stopPropagation()
-			vscode.postMessage({ type: "exportTaskWithId", text: itemId })
-		},
-		[itemId],
-	)
+	const handleExportClick = useCallback((e: React.MouseEvent) => {
+		e.stopPropagation()
+		setShowDialog(true)
+	}, [])
 
 	return (
-		<StandardTooltip content={t("history:exportTask")}>
-			<Button
-				data-testid="export"
-				variant="ghost"
-				size="icon"
-				aria-label={t("history:exportTask")}
-				className="group-hover:opacity-100 opacity-50 transition-opacity"
-				onClick={handleExportClick}>
-				<span className="codicon codicon-desktop-download scale-80" />
-			</Button>
-		</StandardTooltip>
+		<>
+			<StandardTooltip content={t("history:exportTask")}>
+				<Button
+					data-testid="export"
+					variant="ghost"
+					size="icon"
+					className="group-hover:opacity-100 opacity-50 transition-opacity"
+					onClick={handleExportClick}>
+					<span className="codicon codicon-desktop-download scale-80" />
+				</Button>
+			</StandardTooltip>
+			{showDialog && <ExportDialog tasks={[item]} open={showDialog} onOpenChange={setShowDialog} />}
+		</>
 	)
 }

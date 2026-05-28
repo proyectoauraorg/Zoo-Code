@@ -25,21 +25,6 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({
 }) => {
 	const { t } = useAppTranslation()
 
-	const tokensIn = item.tokensIn || 0
-	const tokensOut = item.tokensOut || 0
-	const cacheWrites = item.cacheWrites || 0
-	const cacheReads = item.cacheReads || 0
-	const totalTokens = tokensIn + tokensOut + cacheWrites + cacheReads
-
-	const metadataTooltip = [
-		item.totalCost ? `Cost: $${item.totalCost.toFixed(2)}` : null,
-		totalTokens > 0 ? `Tokens: ${totalTokens.toLocaleString()}` : null,
-		item.workspace ? `Workspace: ${item.workspace}` : null,
-		item.mode ? `Mode: ${item.mode}` : null,
-	]
-		.filter(Boolean)
-		.join(" · ")
-
 	return (
 		<div className="text-xs text-vscode-descriptionForeground flex justify-between items-center">
 			<div className="flex gap-1 items-center text-vscode-descriptionForeground/60">
@@ -65,32 +50,13 @@ const TaskItemFooter: React.FC<TaskItemFooterProps> = ({
 						</span>
 					</>
 				)}
-
-				{/* Metadata tooltip trigger */}
-				{metadataTooltip && (
-					<StandardTooltip content={metadataTooltip}>
-						<span
-							className="ml-0.5 cursor-help opacity-60 hover:opacity-100 transition-opacity"
-							aria-label="Task metadata">
-							⋯
-						</span>
-					</StandardTooltip>
-				)}
 			</div>
 
-			{/* Action Buttons — grouped with separator */}
+			{/* Action Buttons for non-compact view */}
 			{!isSelectionMode && (
-				<div className="flex items-center gap-0 -mx-1.5 text-vscode-descriptionForeground/60 hover:text-vscode-descriptionForeground opacity-0 group-hover:opacity-100 transition-opacity">
-					{/* Non-destructive actions */}
+				<div className="flex flex-row gap-0 -mx-1.5 items-center text-vscode-descriptionForeground/60 hover:text-vscode-descriptionForeground opacity-0 group-hover:opacity-100">
 					<CopyButton itemTask={item.task} />
-					{variant === "full" && <ExportButton itemId={item.id} />}
-					{/* Visual separator before destructive action */}
-					{onDelete && (
-						<span className="mx-0.5 text-vscode-descriptionForeground/30 select-none" aria-hidden="true">
-							│
-						</span>
-					)}
-					{/* Destructive action */}
+					{variant === "full" && <ExportButton item={item} />}
 					{onDelete && <DeleteButton itemId={item.id} onDelete={onDelete} />}
 				</div>
 			)}
