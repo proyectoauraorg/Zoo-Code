@@ -691,8 +691,8 @@ importers:
         specifier: '>=5.29.0'
         version: 6.24.0
       uuid:
-        specifier: ^14.0.0
-        version: 14.0.0
+        specifier: ^11.1.0
+        version: 11.1.1
       vscode-material-icons:
         specifier: ^0.1.1
         version: 0.1.1
@@ -9279,10 +9279,6 @@ packages:
 
   uuid@11.1.1:
     resolution: {integrity: sha512-vIYxrBCC/N/K+Js3qSN88go7kIfNPssr/hHCesKCQNAjmgvYS2oqr69kIufEG+O4+PfezOH4EbIeHCfFov8ZgQ==}
-    hasBin: true
-
-  uuid@14.0.0:
-    resolution: {integrity: sha512-Qo+uWgilfSmAhXCMav1uYFynlQO7fMFiMVZsQqZRMIXp0O7rR7qjkj+cPvBHLgBqi960QCoo/PH2/6ZtVqKvrg==}
     hasBin: true
 
   uuid@8.3.2:
@@ -19476,8 +19472,6 @@ snapshots:
   util-deprecate@1.0.2: {}
 
   uuid@11.1.1: {}
-
-  uuid@14.0.0: {}
 
   uuid@8.3.2: {}
 
