@@ -1,3 +1,5 @@
+import { visit } from "unist-util-visit"
+
 /**
  * Counts the number of markdown headings in the given text.
  * Matches headings from level 1 to 6 (e.g. #, ##, ###, etc.).
@@ -32,7 +34,7 @@ export type AlertType = (typeof ALERT_TYPES)[number]
 
 // Matches a leading alert marker like "[!NOTE]" (case-insensitive) optionally
 // followed by trailing whitespace/newline on the first line of a blockquote.
-const ALERT_MARKER_REGEX = /^\[!(note|tip|important|warning|caution)\][^\S\r\n]*\r?\n?/i
+const ALERT_MARKER_REGEX = new RegExp(`^\\[!(${ALERT_TYPES.join("|")})\\][^\\S\\r\\n]*\\r?\\n?`, "i")
 
 /**
  * remark plugin that detects GitHub-style alerts inside blockquotes
@@ -47,24 +49,8 @@ const ALERT_MARKER_REGEX = /^\[!(note|tip|important|warning|caution)\][^\S\r\n]*
  * normal blockquotes continue to render exactly as before.
  */
 export function remarkGithubAlerts() {
-	return (tree: any) => {
-		walkAlertBlockquotes(tree)
-	}
-}
-
-function walkAlertBlockquotes(node: any): void {
-	if (!node || typeof node !== "object") {
-		return
-	}
-
-	if (node.type === "blockquote") {
-		annotateAlertBlockquote(node)
-	}
-
-	if (Array.isArray(node.children)) {
-		for (const child of node.children) {
-			walkAlertBlockquotes(child)
-		}
+	return (tree: Parameters<typeof visit>[0]) => {
+		visit(tree, "blockquote", annotateAlertBlockquote)
 	}
 }
 

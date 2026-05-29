@@ -369,26 +369,22 @@ const MarkdownBlock = memo(({ markdown }: MarkdownBlockProps) => {
 					</code>
 				)
 			},
-			blockquote: ({ children, className, ...props }: any) => {
+			blockquote: ({ children, className, "data-alert-type": alertType, ..._rest }: any) => {
 				// The remarkGithubAlerts plugin tags alert blockquotes with a
 				// `data-alert-type` attribute and `markdown-alert*` classes.
 				// Anything without that attribute is a normal blockquote and
 				// must render unchanged.
-				const alertType = props["data-alert-type"] as AlertType | undefined
+				const typedAlertType = alertType as AlertType | undefined
 
-				if (!alertType || !(alertType in ALERT_ICONS)) {
-					return (
-						<blockquote className={className} {...props}>
-							{children}
-						</blockquote>
-					)
+				if (!typedAlertType || !(typedAlertType in ALERT_ICONS)) {
+					return <blockquote className={className}>{children}</blockquote>
 				}
 
 				return (
-					<blockquote className={className} {...props}>
+					<blockquote className={className} data-alert-type={typedAlertType}>
 						<div className="markdown-alert-title">
-							<span className={`codicon ${ALERT_ICONS[alertType]}`} aria-hidden="true" />
-							<span>{ALERT_LABELS[alertType]}</span>
+							<span className={`codicon ${ALERT_ICONS[typedAlertType]}`} aria-hidden="true" />
+							<span>{ALERT_LABELS[typedAlertType]}</span>
 						</div>
 						{children}
 					</blockquote>
