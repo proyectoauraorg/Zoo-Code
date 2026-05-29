@@ -2118,6 +2118,13 @@ export class Task extends EventEmitter<TaskEvents> implements TaskLike {
 
 		this.abort = true
 
+		// Reset streaming state so the UI unlocks immediately.
+		// Without this, task switches that call abortTask() without going
+		// through resumeAfterDelegation() leave isStreaming=true, causing
+		// the chat input to remain locked (issue #257).
+		this.isStreaming = false
+		this.isWaitingForFirstChunk = false
+
 		// Reset consecutive error counters on abort (manual intervention)
 		this.consecutiveNoToolUseCount = 0
 		this.consecutiveNoAssistantMessagesCount = 0
