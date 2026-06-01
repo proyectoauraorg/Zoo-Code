@@ -1,0 +1,49 @@
+{
+  "name": "zoodash",
+  "version": "1.4.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3939",
+    "build": "next build",
+    "start": "next start -p 3939",
+    "lint": "next lint",
+    "historian": "python3 ingest/historian.py",
+    "test": "vitest run"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3"
+    ]
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.100.14",
+    "@tremor/react": "^3.18.7",
+    "better-sqlite3": "^12.10.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
+    "lucide-react": "^1.17.0",
+    "next": "14.2.35",
+    "react": "^18",
+    "react-dom": "^18",
+    "tailwind-merge": "^3.6.0",
+    "zod": "3.25.76"
+  },
+  "devDependencies": {
+    "@eslint/eslintrc": "^3.3.5",
+    "@headlessui/tailwindcss": "^0.2.2",
+    "@tailwindcss/forms": "^0.5.11",
+    "@types/better-sqlite3": "^7.6.13",
+    "@types/node": "^20",
+    "@types/react": "^18",
+    "@types/react-dom": "^18",
+    "eslint": "^9.27.0",
+    "postcss": "^8",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.8.3",
+    "vitest": "^4.1.7"
+  },
+  "engines": {
+    "node": "20.20.2"
+  }
+}
