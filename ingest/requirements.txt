@@ -1,2 +1,0 @@
-# ZooDash Python ingest — stdlib only, no PyPI deps in v1
-# historian.py, backfill_*.py, conflict_enricher.py, refresh_read_models.py
