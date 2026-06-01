@@ -89,6 +89,29 @@ turbo clean
 
 ## Git
 
-- **origin:** `git@github.com:proyectoauraorg/Zoo-Code.git`
-- **upstream:** `git@github.com:Zoo-Code-Org/Zoo-Code.git`
+- **origin:** `git@github.com:proyectoauraorg/Zoo-Code.git` (fork propio)
+- **upstream:** `git@github.com:Zoo-Code-Org/Zoo-Code.git` (upstream original)
 - Hooks managed by Husky + lint-staged (Prettier on commit)
+
+## ⚠️ GOBERNANZA: Aislamiento de ZooDash
+
+**ZooDash es exclusivo de `proyectoauraorg`.** Nunca debe enviarse al upstream (`Zoo-Code-Org`).
+
+### Paths protegidos (solo `origin`, nunca `upstream`)
+
+- `apps/dashboard/` — Dashboard Next.js
+- `ingest/` — Pipelines Python
+- `deploy/` — Configuración launchd
+- `docs/dashboard/` — Documentación ZooDash
+- `CLAUDE.md` — Este archivo
+- `zZooContrib.code-workspace` — Workspace unificado
+
+### Protección automática
+
+El hook [`.husky/pre-push`](.husky/pre-push) bloquea automáticamente cualquier push a `upstream` que contenga cambios en los paths protegidos. Si intentas hacer `git push upstream main` con commits de ZooDash, el push será rechazado.
+
+### Brand
+
+- **proyectoauraorg** = marca propia, personalizaciones exclusivas
+- **Zoo-Code-Org** = upstream original, código base compartido
+- Nunca mezclar brand, configuración de marca, colores ni logos de ZooDash en commits del upstream
