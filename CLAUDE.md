@@ -108,7 +108,15 @@ turbo clean
 
 ### Protección automática
 
-El hook [`.husky/pre-push`](.husky/pre-push) bloquea automáticamente cualquier push a `upstream` que contenga cambios en los paths protegidos. Si intentas hacer `git push upstream main` con commits de ZooDash, el push será rechazado.
+El hook [`.husky/pre-push`](.husky/pre-push) ejecuta [`scripts/upstream-guard.sh`](scripts/upstream-guard.sh) (leído de `main`), que rechaza cualquier push a `upstream` cuyos commits toquen los paths protegidos.
+
+**Limitación — la protección es por rama.** Husky ejecuta el `.husky/pre-push` del _working tree_ de la rama activa, y el guard solo vive en `main` y `develop`; en feature branches no corre. La copia en `.git/hooks/pre-push` (de `install-hooks.sh`) **no se ejecuta** porque `core.hooksPath=.husky/_`.
+
+### Política de push a upstream (obligatoria)
+
+- **A `upstream` se empuja ÚNICAMENTE desde `develop` o `main`** — las dos ramas que llevan el guard activo.
+- **Nunca** `git push upstream <feature-branch>` ni `git push upstream HEAD:main` desde una feature branch: el guard no se evaluaría.
+- Las feature branches destinadas al upstream **no** deben contener `CLAUDE.md`, el guard ni otros paths de ZooDash (contaminarían el PR).
 
 ### Brand
 

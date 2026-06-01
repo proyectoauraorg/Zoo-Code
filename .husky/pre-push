@@ -2,16 +2,26 @@
 # =============================================================================
 # PRE-PUSH HOOK — Husky-managed
 # =============================================================================
-# The upstream guard is sourced from main branch (branch-independent).
-# A persistent copy also lives in .git/hooks/pre-push via install-hooks.sh.
+# Upstream guard logic is read from main:scripts/upstream-guard.sh so every
+# branch carrying THIS hook runs the same up-to-date guard.
+# NOTE: protection is per-branch — Husky runs the working-tree copy of this
+# hook, which only exists on main/develop. Policy: push to `upstream` ONLY
+# from develop/main. (The .git/hooks/pre-push copy from install-hooks.sh does
+# NOT run because core.hooksPath=.husky/_.)
 
-guard_content="$(git show main:scripts/upstream-guard.sh 2>/dev/null)"
-if [ -n "$guard_content" ]; then
-  printf '%s\n' "$guard_content" | sh -s -- "$@"
+guard_tmp="$(mktemp 2>/dev/null || echo "/tmp/upstream-guard.$$")"
+if git show main:scripts/upstream-guard.sh > "$guard_tmp" 2>/dev/null && [ -s "$guard_tmp" ]; then
+  # Run the guard with git's pre-push stdin (the ref lines) intact. Do NOT pipe
+  # the script via `sh -s` — that replaces stdin, so the guard's `while read`
+  # sees nothing and silently allows the push.
+  sh "$guard_tmp" "$@"
   guard_exit=$?
-  if [ $guard_exit -ne 0 ]; then
-    exit $guard_exit
+  rm -f "$guard_tmp"
+  if [ "$guard_exit" -ne 0 ]; then
+    exit "$guard_exit"
   fi
+else
+  rm -f "$guard_tmp"
 fi
 
 branch="$(git rev-parse --abbrev-ref HEAD)"
