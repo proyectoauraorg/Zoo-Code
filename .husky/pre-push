@@ -1,51 +1,19 @@
 #!/usr/bin/env sh
 # =============================================================================
-# GOVERNANCE: Block ZooDash content from reaching upstream (Zoo-Code-Org)
-# ZooDash, ingest/, deploy/, docs/dashboard/ are EXCLUSIVE to proyectoauraorg
+# PRE-PUSH HOOK — Husky-managed
 # =============================================================================
-remote="$1"
-url="$2"
+# The upstream guard is sourced from main branch (branch-independent).
+# A persistent copy also lives in .git/hooks/pre-push via install-hooks.sh.
 
-if echo "$url" | grep -qi "Zoo-Code-Org"; then
-  # We're pushing to upstream — check for ZooDash-only paths
-  ZOODASH_PATHS="apps/dashboard/ ingest/ deploy/ docs/dashboard/ CLAUDE.md zZooContrib.code-workspace"
-  blocked=""
-
-  # Get the range of commits being pushed
-  local_ref=$(git rev-parse HEAD 2>/dev/null)
-  remote_ref=$(git ls-remote "$url" "$(git rev-parse --abbrev-ref HEAD)" 2>/dev/null | cut -f1)
-
-  if [ -n "$remote_ref" ]; then
-    changed_files=$(git diff --name-only "$remote_ref"..HEAD 2>/dev/null)
-  else
-    changed_files=$(git diff --name-only HEAD~10..HEAD 2>/dev/null)
-  fi
-
-  for pattern in $ZOODASH_PATHS; do
-    if echo "$changed_files" | grep -q "^$pattern"; then
-      blocked="$blocked $pattern"
-    fi
-  done
-
-  if [ -n "$blocked" ]; then
-    echo ""
-    echo "╔══════════════════════════════════════════════════════════════════╗"
-    echo "║  🚫 BLOCKED: ZooDash content cannot be pushed to upstream      ║"
-    echo "║                                                                  ║"
-    echo "║  ZooDash is exclusive to proyectoauraorg/Zoo-Code.git           ║"
-    echo "║  The following proprietary paths were detected:                  ║"
-    echo "║$blocked"
-    echo "║                                                                  ║"
-    echo "║  Push to 'origin' (proyectoauraorg) instead.                    ║"
-    echo "╚══════════════════════════════════════════════════════════════════╝"
-    echo ""
-    exit 1
+guard_content="$(git show main:scripts/upstream-guard.sh 2>/dev/null)"
+if [ -n "$guard_content" ]; then
+  printf '%s\n' "$guard_content" | sh -s -- "$@"
+  guard_exit=$?
+  if [ $guard_exit -ne 0 ]; then
+    exit $guard_exit
   fi
 fi
 
-# =============================================================================
-# Standard pre-push checks
-# =============================================================================
 branch="$(git rev-parse --abbrev-ref HEAD)"
 
 if [ "$branch" = "main" ]; then
@@ -53,7 +21,6 @@ if [ "$branch" = "main" ]; then
   exit 1
 fi
 
-# Detect if running on Windows and use pnpm.cmd, otherwise use pnpm.
 if [ "$OS" = "Windows_NT" ]; then
   pnpm_cmd="pnpm.cmd"
 else
@@ -66,20 +33,16 @@ fi
 
 $pnpm_cmd run check-types
 
-# Use dotenvx to securely load .env.local and run commands that depend on it
 if [ -f ".env.local" ]; then
-  # Check if RUN_TESTS_ON_PUSH is set to true and run tests with dotenvx
   if npx dotenvx get RUN_TESTS_ON_PUSH -f .env.local 2>/dev/null | grep -q "^true$"; then
     npx dotenvx run -f .env.local -- $pnpm_cmd run test
   fi
 else
-  # Fallback: run tests if RUN_TESTS_ON_PUSH is set in regular environment
   if [ "$RUN_TESTS_ON_PUSH" = "true" ]; then
     $pnpm_cmd run test
   fi
 fi
 
-# Check for new changesets.
 NEW_CHANGESETS=$(find .changeset -name "*.md" ! -name "README.md" | wc -l | tr -d ' ')
 echo "Changeset files: $NEW_CHANGESETS"
 
