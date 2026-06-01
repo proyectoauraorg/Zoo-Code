@@ -1,0 +1,71 @@
+{
+  "source": "github",
+  "fetched_at": "2026-05-20T12:00:00Z",
+  "ok": true,
+  "summary": "muestra para tests",
+  "raw": {
+    "pr_open": 2,
+    "pr_merged": 1,
+    "pr_closed": 0,
+    "pr_ci_failing": 1,
+    "issues": 2,
+    "mentions": 0,
+    "subscriptions": 5,
+    "notifs_total": 7
+  },
+  "items": [
+    {
+      "id": "100",
+      "kind": "pr",
+      "title": "feat: algo",
+      "url": "https://github.com/Zoo-Code-Org/Zoo-Code/pull/100",
+      "state": "OPEN",
+      "ts": "2026-05-20T11:00:00Z",
+      "meta": {
+        "reviewDecision": "CHANGES_REQUESTED",
+        "mergeable": "CONFLICTING",
+        "isDraft": false,
+        "ci": { "state": "fail", "passed": 3, "failed": 2, "pending": 0 }
+      }
+    },
+    {
+      "id": "101",
+      "kind": "pr",
+      "title": "draft: wip",
+      "url": "https://github.com/Zoo-Code-Org/Zoo-Code/pull/101",
+      "state": "OPEN",
+      "ts": "2026-05-20T10:00:00Z",
+      "meta": {
+        "reviewDecision": "",
+        "mergeable": "MERGEABLE",
+        "isDraft": true,
+        "ci": { "state": "pass", "passed": 5, "failed": 0, "pending": 0 }
+      }
+    },
+    {
+      "id": "200",
+      "kind": "issue",
+      "title": "bug: algo roto",
+      "url": "https://github.com/Zoo-Code-Org/Zoo-Code/issues/200",
+      "state": "OPEN",
+      "ts": "2026-05-19T09:00:00Z",
+      "meta": {}
+    },
+    {
+      "id": "main",
+      "kind": "drift",
+      "title": "origin vs upstream",
+      "state": "drift",
+      "ts": "",
+      "meta": { "ahead": 4, "behind": 1, "status": "diverged" }
+    },
+    {
+      "id": "v9.9.9",
+      "kind": "release",
+      "title": "Zoo Code v9.9.9",
+      "state": "latest",
+      "ts": "2026-05-18T00:00:00Z",
+      "meta": {}
+    }
+  ]
+}

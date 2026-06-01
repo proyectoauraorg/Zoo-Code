@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>com.zoodash.historian</string>
+
+  <!-- Historiza el snapshot en SQLite cada 15 min. Sin --notify (evita spam de
+       alertas stale repetidas); las notificaciones se corren a mano o en su propio job. -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/usr/bin/python3</string>
+    <string>/Users/dr.armandovaquera/ZooDash/ingest/historian.py</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>/Users/dr.armandovaquera/ZooDash</string>
+
+  <key>StartInterval</key>
+  <integer>900</integer>
+
+  <key>RunAtLoad</key>
+  <true/>
+
+  <key>StandardOutPath</key>
+  <string>/tmp/zoodash-historian.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/zoodash-historian.log</string>
+</dict>
+</plist>
