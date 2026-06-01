@@ -1,50 +1,16 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
-
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
-
-# testing
-/coverage
-
-# next.js
+# Next.js
 /.next/
 /out/
 
-# production
-/build
+# Database
+/data/*.db
+/data/*.db-journal
 
-# misc
-.DS_Store
-*.pem
+# Environment
+.env.local
+.env.*.local
 
-# debug
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# local env files
-.env*.local
-
-# control-plane database (created by ingest/historian.py)
-/data/
-*.db
-*.db-shm
-*.db-wal
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# Chrome for Testing (audit; no versionar)
-/chrome/
-
-# python (ingest/ scripts)
+# Python
 __pycache__/
-*.py[cod]
+*.pyc
 .pytest_cache/
