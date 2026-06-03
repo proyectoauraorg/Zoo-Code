@@ -4,6 +4,9 @@ import { Fzf } from "fzf"
 import { highlightFzfMatch } from "@/utils/highlight"
 import { useExtensionState } from "@/context/ExtensionStateContext"
 
+import { useDeepSearch } from "./useDeepSearch"
+import type { DisplayHistoryItem } from "./types"
+
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
 export const useTaskSearch = () => {
@@ -12,6 +15,8 @@ export const useTaskSearch = () => {
 	const [sortOption, setSortOption] = useState<SortOption>("newest")
 	const [lastNonRelevantSort, setLastNonRelevantSort] = useState<SortOption | null>("newest")
 	const [showAllWorkspaces, setShowAllWorkspaces] = useState(false)
+
+	const { setDeepQuery, deepResults, isSearching: isDeepSearching } = useDeepSearch()
 
 	useEffect(() => {
 		if (searchQuery && sortOption !== "mostRelevant" && !lastNonRelevantSort) {
@@ -22,6 +27,11 @@ export const useTaskSearch = () => {
 			setLastNonRelevantSort(null)
 		}
 	}, [searchQuery, sortOption, lastNonRelevantSort])
+
+	// Sync search query to deep search hook
+	useEffect(() => {
+		setDeepQuery(searchQuery)
+	}, [searchQuery, setDeepQuery])
 
 	const presentableTasks = useMemo(() => {
 		let tasks = taskHistory.filter((item) => item.ts && item.task)
@@ -38,7 +48,7 @@ export const useTaskSearch = () => {
 	}, [presentableTasks])
 
 	const tasks = useMemo(() => {
-		let results = presentableTasks
+		let results: DisplayHistoryItem[]
 
 		if (searchQuery) {
 			const searchResults = fzf.find(searchQuery)
@@ -55,6 +65,26 @@ export const useTaskSearch = () => {
 					workspace: result.item.workspace,
 				}
 			})
+
+			// Merge deep content matches that are not already in fuzzy results
+			if (deepResults.size > 0) {
+				const fuzzyIds = new Set(results.map((r) => r.id))
+
+				for (const [taskId, snippet] of deepResults) {
+					if (!fuzzyIds.has(taskId)) {
+						const task = presentableTasks.find((t) => t.id === taskId)
+						if (task) {
+							results.push({
+								...task,
+								isDeepMatch: true,
+								deepMatchSnippet: snippet,
+							})
+						}
+					}
+				}
+			}
+		} else {
+			results = [...presentableTasks]
 		}
 
 		// Then sort the results
@@ -76,7 +106,7 @@ export const useTaskSearch = () => {
 					return (b.ts || 0) - (a.ts || 0)
 			}
 		})
-	}, [presentableTasks, searchQuery, fzf, sortOption])
+	}, [presentableTasks, searchQuery, fzf, sortOption, deepResults])
 
 	return {
 		tasks,
@@ -88,5 +118,6 @@ export const useTaskSearch = () => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		isDeepSearching,
 	}
 }

@@ -1,4 +1,5 @@
 import { memo } from "react"
+import { Inbox } from "lucide-react"
 
 import { vscode } from "@src/utils/vscode"
 import { useAppTranslation } from "@src/i18n/TranslationContext"
@@ -30,7 +31,15 @@ const HistoryPreview = () => {
 					{t("history:viewAllHistory")}
 				</button>
 			</div>
-			{displayGroups.length !== 0 && (
+			{displayGroups.length === 0 ? (
+				<div
+					className="flex flex-col items-center justify-center py-8 text-center"
+					data-testid="history-preview-empty"
+					role="status">
+					<Inbox className="size-8 text-vscode-descriptionForeground/30 mb-3" aria-hidden="true" />
+					<p className="text-sm text-vscode-descriptionForeground">{t("history:emptyDescription")}</p>
+				</div>
+			) : (
 				<>
 					{displayGroups.map((group) => (
 						<TaskGroupItem

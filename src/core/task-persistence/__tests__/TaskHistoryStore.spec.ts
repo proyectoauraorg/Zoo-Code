@@ -407,6 +407,146 @@ describe("TaskHistoryStore", () => {
 		})
 	})
 
+	describe("sortItems()", () => {
+		it("sorts by newest (default)", () => {
+			const items = [
+				makeHistoryItem({ id: "a", ts: 1000 }),
+				makeHistoryItem({ id: "b", ts: 3000 }),
+				makeHistoryItem({ id: "c", ts: 2000 }),
+			]
+			const sorted = TaskHistoryStore.sortItems(items, "newest")
+			expect(sorted.map((i) => i.id)).toEqual(["b", "c", "a"])
+		})
+
+		it("sorts by oldest", () => {
+			const items = [
+				makeHistoryItem({ id: "a", ts: 1000 }),
+				makeHistoryItem({ id: "b", ts: 3000 }),
+				makeHistoryItem({ id: "c", ts: 2000 }),
+			]
+			const sorted = TaskHistoryStore.sortItems(items, "oldest")
+			expect(sorted.map((i) => i.id)).toEqual(["a", "c", "b"])
+		})
+
+		it("sorts by mostExpensive", () => {
+			const items = [
+				makeHistoryItem({ id: "a", totalCost: 0.01 }),
+				makeHistoryItem({ id: "b", totalCost: 0.5 }),
+				makeHistoryItem({ id: "c", totalCost: 0.1 }),
+			]
+			const sorted = TaskHistoryStore.sortItems(items, "mostExpensive")
+			expect(sorted.map((i) => i.id)).toEqual(["b", "c", "a"])
+		})
+
+		it("sorts by mostTokens", () => {
+			const items = [
+				makeHistoryItem({ id: "a", tokensIn: 100, tokensOut: 50 }),
+				makeHistoryItem({ id: "b", tokensIn: 500, tokensOut: 300 }),
+				makeHistoryItem({ id: "c", tokensIn: 200, tokensOut: 100 }),
+			]
+			const sorted = TaskHistoryStore.sortItems(items, "mostTokens")
+			expect(sorted.map((i) => i.id)).toEqual(["b", "c", "a"])
+		})
+
+		it("does not mutate the original array", () => {
+			const items = [makeHistoryItem({ id: "a", ts: 1000 }), makeHistoryItem({ id: "b", ts: 3000 })]
+			const originalOrder = items.map((i) => i.id)
+			TaskHistoryStore.sortItems(items, "newest")
+			expect(items.map((i) => i.id)).toEqual(originalOrder)
+		})
+	})
+
+	describe("getPaginated()", () => {
+		it("returns all items when fewer than pageSize", async () => {
+			await store.initialize()
+
+			await store.upsert(makeHistoryItem({ id: "p1", ts: 1000 }))
+			await store.upsert(makeHistoryItem({ id: "p2", ts: 2000 }))
+
+			const result = store.getPaginated({ pageSize: 50 })
+			expect(result.items).toHaveLength(2)
+			expect(result.hasMore).toBe(false)
+			expect(result.nextCursor).toBeUndefined()
+		})
+
+		it("paginates with cursor", async () => {
+			await store.initialize()
+
+			// Insert 10 items with distinct timestamps
+			for (let i = 1; i <= 10; i++) {
+				await store.upsert(makeHistoryItem({ id: `pg-${i}`, ts: i * 1000 }))
+			}
+
+			const page1 = store.getPaginated({ pageSize: 3 })
+			expect(page1.items).toHaveLength(3)
+			expect(page1.hasMore).toBe(true)
+			expect(page1.nextCursor).toBeDefined()
+
+			// Newest first: pg-10, pg-9, pg-8
+			expect(page1.items.map((i) => i.id)).toEqual(["pg-10", "pg-9", "pg-8"])
+
+			const page2 = store.getPaginated({ pageSize: 3, cursor: page1.nextCursor })
+			expect(page2.items).toHaveLength(3)
+			expect(page2.items.map((i) => i.id)).toEqual(["pg-7", "pg-6", "pg-5"])
+
+			// Continue until exhausted
+			const page3 = store.getPaginated({ pageSize: 3, cursor: page2.nextCursor })
+			const page4 = store.getPaginated({ pageSize: 3, cursor: page3.nextCursor })
+
+			// All 10 items should have been returned
+			const allIds = [...page1.items, ...page2.items, ...page3.items, ...page4.items].map((i) => i.id)
+			expect(new Set(allIds).size).toBe(10)
+			expect(page4.hasMore).toBe(false)
+		})
+
+		it("filters by workspace", async () => {
+			await store.initialize()
+
+			await store.upsert(makeHistoryItem({ id: "ws1", workspace: "/workspace/a", ts: 1000 }))
+			await store.upsert(makeHistoryItem({ id: "ws2", workspace: "/workspace/b", ts: 2000 }))
+			await store.upsert(makeHistoryItem({ id: "ws3", workspace: "/workspace/a", ts: 3000 }))
+
+			const result = store.getPaginated({ workspace: "/workspace/a" })
+			expect(result.items).toHaveLength(2)
+			expect(result.items.every((i) => i.workspace === "/workspace/a")).toBe(true)
+		})
+
+		it("respects sortOption", async () => {
+			await store.initialize()
+
+			await store.upsert(makeHistoryItem({ id: "s1", ts: 1000, totalCost: 0.5 }))
+			await store.upsert(makeHistoryItem({ id: "s2", ts: 2000, totalCost: 0.01 }))
+			await store.upsert(makeHistoryItem({ id: "s3", ts: 3000, totalCost: 0.1 }))
+
+			const result = store.getPaginated({ sortOption: "mostExpensive" })
+			expect(result.items.map((i) => i.id)).toEqual(["s1", "s3", "s2"])
+		})
+
+		it("returns empty page for invalid cursor", async () => {
+			await store.initialize()
+
+			await store.upsert(makeHistoryItem({ id: "x1", ts: 1000 }))
+
+			const result = store.getPaginated({ cursor: "non-existent-id", pageSize: 5 })
+			// Cursor not found → startIndex stays 0, so it returns items from the beginning
+			expect(result.items).toHaveLength(1)
+		})
+
+		it("defaults to pageSize 50 and sortOption newest", async () => {
+			await store.initialize()
+
+			for (let i = 1; i <= 60; i++) {
+				await store.upsert(makeHistoryItem({ id: `def-${i}`, ts: i * 1000 }))
+			}
+
+			const result = store.getPaginated()
+			expect(result.items).toHaveLength(50)
+			expect(result.hasMore).toBe(true)
+			// Newest first
+			expect(result.items[0].id).toBe("def-60")
+		})
+	})
+
 	describe("invalidate()", () => {
 		it("re-reads a task from disk", async () => {
 			await store.initialize()

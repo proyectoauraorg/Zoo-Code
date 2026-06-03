@@ -30,6 +30,7 @@ export const CopyButton = ({ itemTask }: CopyButtonProps) => {
 				variant="ghost"
 				size="icon"
 				onClick={onCopy}
+				aria-label={t("history:copyPrompt")}
 				className="group-hover:opacity-100 opacity-50 transition-opacity"
 				data-testid="copy-prompt-button">
 				<span className={cn("codicon scale-80", { "codicon-check": isCopied, "codicon-copy": !isCopied })} />

@@ -6,7 +6,7 @@
 	},
 	"scripts": {
 		"preinstall": "node scripts/bootstrap.mjs",
-		"prepare": "husky && sh scripts/install-hooks.sh",
+		"prepare": "husky",
 		"install": "node scripts/bootstrap.mjs",
 		"install:all": "node scripts/bootstrap.mjs",
 		"lint": "turbo lint --log-order grouped --output-logs new-only",
@@ -56,8 +56,7 @@
 	},
 	"pnpm": {
 		"onlyBuiltDependencies": [
-			"@vscode/ripgrep",
-			"better-sqlite3"
+			"@vscode/ripgrep"
 		],
 		"overrides": {
 			"tar-fs": ">=3.1.1",

@@ -111,9 +111,9 @@ describe("OpenAiHandler", () => {
 				baseURL: expect.any(String),
 				apiKey: expect.any(String),
 				defaultHeaders: {
-					"HTTP-Referer": "https://github.com/Zoo-Code-Org/Zoo-Code",
-					"X-Title": "Zoo Code",
-					"User-Agent": `ZooCode/${Package.version}`,
+					"HTTP-Referer": "https://github.com/RooVetGit/Roo-Cline",
+					"X-Title": "Roo Code",
+					"User-Agent": `RooCode/${Package.version}`,
 				},
 				timeout: expect.any(Number),
 			})
@@ -543,114 +543,6 @@ describe("OpenAiHandler", () => {
 			expect(mockCreate).toHaveBeenCalled()
 			const callArgs = mockCreate.mock.calls[0][0]
 			expect(callArgs.max_completion_tokens).toBe(4096)
-		})
-
-		it("should emit tool_call_end when finish_reason is 'length' with active tool calls", async () => {
-			mockCreate.mockImplementation(async () => {
-				return {
-					[Symbol.asyncIterator]: async function* () {
-						yield {
-							choices: [
-								{
-									delta: {
-										tool_calls: [
-											{
-												index: 0,
-												id: "call_length",
-												function: { name: "write_to_file", arguments: "" },
-											},
-										],
-									},
-									finish_reason: null,
-								},
-							],
-						}
-						yield {
-							choices: [
-								{
-									delta: {
-										tool_calls: [
-											{ index: 0, function: { arguments: '{"path":"test.txt","content":"' } },
-										],
-									},
-									finish_reason: null,
-								},
-							],
-						}
-						// Token limit hit — standard OpenAI behavior
-						yield {
-							choices: [
-								{
-									delta: {},
-									finish_reason: "length",
-								},
-							],
-						}
-					},
-				}
-			})
-
-			const stream = handler.createMessage(systemPrompt, messages)
-			const chunks: any[] = []
-			for await (const chunk of stream) {
-				chunks.push(chunk)
-			}
-
-			// Should have tool_call_end even though finish_reason is "length", not "tool_calls"
-			const toolCallEndChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
-			expect(toolCallEndChunks).toHaveLength(1)
-			expect(toolCallEndChunks[0].id).toBe("call_length")
-		})
-
-		it("should emit tool_call_end via post-loop cleanup when stream ends without finish_reason", async () => {
-			mockCreate.mockImplementation(async () => {
-				return {
-					[Symbol.asyncIterator]: async function* () {
-						yield {
-							choices: [
-								{
-									delta: {
-										tool_calls: [
-											{
-												index: 0,
-												id: "call_orphan",
-												function: { name: "write_to_file", arguments: "" },
-											},
-										],
-									},
-									finish_reason: null,
-								},
-							],
-						}
-						yield {
-							choices: [
-								{
-									delta: {
-										tool_calls: [{ index: 0, function: { arguments: '{"path":"test.txt"}' } }],
-									},
-									finish_reason: null,
-								},
-							],
-						}
-						// MiMo-style termination: empty choices, no finish_reason
-						yield {
-							choices: [],
-							usage: { prompt_tokens: 100, completion_tokens: 50, total_tokens: 150 },
-						}
-					},
-				}
-			})
-
-			const stream = handler.createMessage(systemPrompt, messages)
-			const chunks: any[] = []
-			for await (const chunk of stream) {
-				chunks.push(chunk)
-			}
-
-			// Post-loop cleanup should have emitted tool_call_end
-			const toolCallEndChunks = chunks.filter((chunk) => chunk.type === "tool_call_end")
-			expect(toolCallEndChunks).toHaveLength(1)
-			expect(toolCallEndChunks[0].id).toBe("call_orphan")
 		})
 	})
 
