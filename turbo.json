@@ -15,12 +15,8 @@
 			"cache": false
 		},
 		"build": {
-			"outputs": ["dist/**", ".next/**"],
-			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts", "next.config.mjs"]
-		},
-		"dev": {
-			"cache": false,
-			"persistent": true
+			"outputs": ["dist/**"],
+			"inputs": ["src/**", "package.json", "tsconfig.json", "tsup.config.ts", "vite.config.ts"]
 		},
 		"watch:tsc": {
 			"cache": false

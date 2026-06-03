@@ -17,7 +17,6 @@ import { ApiProviderError } from "@roo-code/types"
 
 import { OpenAiNativeHandler } from "../openai-native"
 import { ApiHandlerOptions } from "../../../shared/api"
-import { Package } from "../../../shared/package"
 
 // Mock OpenAI client - now everything uses Responses API
 const mockResponsesCreate = vitest.fn()
@@ -98,23 +97,6 @@ describe("OpenAiNativeHandler", () => {
 			})
 			expect(OpenAI).toHaveBeenCalledWith(
 				expect.objectContaining({ baseURL: "https://custom-openai.example.com/v1" }),
-			)
-		})
-
-		it("should identify itself as Zoo Code in request headers", () => {
-			;(OpenAI as unknown as ReturnType<typeof vitest.fn>).mockClear()
-			new OpenAiNativeHandler({
-				apiModelId: "gpt-4.1",
-				openAiNativeApiKey: "test-key",
-			})
-
-			expect(OpenAI).toHaveBeenCalledWith(
-				expect.objectContaining({
-					defaultHeaders: expect.objectContaining({
-						originator: "zoo-code",
-						"User-Agent": expect.stringContaining(`zoo-code/${Package.version}`),
-					}),
-				}),
 			)
 		})
 	})

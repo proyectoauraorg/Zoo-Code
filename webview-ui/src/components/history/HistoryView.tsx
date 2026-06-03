@@ -1,5 +1,5 @@
-import React, { memo, useState, useMemo } from "react"
-import { ArrowLeft } from "lucide-react"
+import React, { memo, useState, useMemo, useCallback, useEffect } from "react"
+import { ArrowLeft, Inbox, SearchX } from "lucide-react"
 import { DeleteTaskDialog } from "./DeleteTaskDialog"
 import { BatchDeleteTaskDialog } from "./BatchDeleteTaskDialog"
 import { Virtuoso } from "react-virtuoso"
@@ -20,10 +20,13 @@ import { useAppTranslation } from "@/i18n/TranslationContext"
 
 import { Tab, TabContent, TabHeader } from "../common/Tab"
 import { useTaskSearch } from "./useTaskSearch"
+import { useHistoryPagination } from "./useHistoryPagination"
 import { useGroupedTasks } from "./useGroupedTasks"
 import { countAllSubtasks } from "./types"
+import type { TaskGroup, TimePeriod } from "./types"
 import TaskItem from "./TaskItem"
 import TaskGroupItem from "./TaskGroupItem"
+import HistorySkeleton from "./HistorySkeleton"
 
 type HistoryViewProps = {
 	onDone: () => void
@@ -31,9 +34,20 @@ type HistoryViewProps = {
 
 type SortOption = "newest" | "oldest" | "mostExpensive" | "mostTokens" | "mostRelevant"
 
+type TimeGroupListItem = { type: "header"; label: string } | { type: "group"; group: TaskGroup }
+
+const TIME_PERIOD_I18N_KEYS: Record<TimePeriod, string> = {
+	today: "history:timeGroup.today",
+	yesterday: "history:timeGroup.yesterday",
+	thisWeek: "history:timeGroup.thisWeek",
+	thisMonth: "history:timeGroup.thisMonth",
+	lastMonth: "history:timeGroup.lastMonth",
+	older: "history:timeGroup.older",
+}
+
 const HistoryView = ({ onDone }: HistoryViewProps) => {
 	const {
-		tasks,
+		tasks: clientTasks,
 		searchQuery,
 		setSearchQuery,
 		sortOption,
@@ -41,17 +55,57 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 		setLastNonRelevantSort,
 		showAllWorkspaces,
 		setShowAllWorkspaces,
+		isDeepSearching,
 	} = useTaskSearch()
 	const { t } = useAppTranslation()
 
+	const [isLoading, setIsLoading] = useState(true)
+
+	// Simulate loading state for skeleton
+	useEffect(() => {
+		const timer = setTimeout(() => setIsLoading(false), 800)
+		return () => clearTimeout(timer)
+	}, [])
+
+	// Server-side pagination for non-search sort options
+	const isServerSidePagination = sortOption !== "mostRelevant"
+
+	const pagination = useHistoryPagination({
+		sortOption,
+		showAllWorkspaces,
+		enabled: isServerSidePagination,
+	})
+
+	// Determine the active tasks based on sort mode:
+	// - "mostRelevant" (fuzzy search) uses client-side filtering from useTaskSearch
+	// - All other sorts use server-side pagination from useHistoryPagination
+	const tasks = useMemo(() => {
+		if (isServerSidePagination) {
+			return pagination.tasks
+		}
+		return clientTasks
+	}, [isServerSidePagination, pagination.tasks, clientTasks])
+
 	// Use grouped tasks hook
-	const { groups, flatTasks, toggleExpand, isSearchMode } = useGroupedTasks(tasks, searchQuery)
+	const { groups, flatTasks, toggleExpand, isSearchMode, timeGroups } = useGroupedTasks(tasks, searchQuery)
 
 	const [deleteTaskId, setDeleteTaskId] = useState<string | null>(null)
 	const [deleteSubtaskCount, setDeleteSubtaskCount] = useState<number>(0)
 	const [isSelectionMode, setIsSelectionMode] = useState(false)
 	const [selectedTaskIds, setSelectedTaskIds] = useState<string[]>([])
 	const [showBatchDeleteDialog, setShowBatchDeleteDialog] = useState<boolean>(false)
+
+	// Flatten timeGroups into a mixed list for Virtuoso rendering
+	const timeGroupListItems = useMemo((): TimeGroupListItem[] => {
+		const items: TimeGroupListItem[] = []
+		for (const tg of timeGroups) {
+			items.push({ type: "header", label: t(TIME_PERIOD_I18N_KEYS[tg.period]) })
+			for (const group of tg.groups) {
+				items.push({ type: "group", group })
+			}
+		}
+		return items
+	}, [timeGroups, t])
 
 	// Get subtask count for a task (recursive total)
 	const getSubtaskCount = useMemo(() => {
@@ -100,6 +154,13 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			setShowBatchDeleteDialog(true)
 		}
 	}
+
+	// Infinite scroll: load more when reaching the end
+	const handleEndReached = useCallback(() => {
+		if (isServerSidePagination && pagination.hasMore && !pagination.isLoading) {
+			pagination.loadMore()
+		}
+	}, [isServerSidePagination, pagination])
 
 	return (
 		<Tab>
@@ -156,6 +217,14 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 							/>
 						)}
 					</VSCodeTextField>
+					{isDeepSearching && (
+						<div
+							className="flex items-center gap-2 text-vscode-descriptionForeground text-xs py-1"
+							data-testid="deep-search-loading">
+							<span className="codicon codicon-loading codicon-modifier-spin" />
+							<span>{t("history:searchingContent")}</span>
+						</div>
+					)}
 					<div className="flex gap-2">
 						<Select
 							value={showAllWorkspaces ? "all" : "current"}
@@ -239,7 +308,7 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 										? t("history:deselectAll")
 										: t("history:selectAll")}
 								</span>
-								<span className="ml-auto text-vscode-descriptionForeground text-xs">
+								<span className="ml-auto text-vscode-descriptionForeground text-xs" aria-live="polite">
 									{t("history:selectedItems", {
 										selected: selectedTaskIds.length,
 										total: tasks.length,
@@ -252,7 +321,31 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 			</TabHeader>
 
 			<TabContent className="px-2 py-0">
-				{isSearchMode && flatTasks ? (
+				{isLoading ? (
+					<HistorySkeleton />
+				) : tasks.length === 0 && !searchQuery ? (
+					<div
+						className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground"
+						data-testid="history-empty-state">
+						<Inbox className="size-12 mb-4 opacity-50" />
+						<p className="text-lg font-medium">{t("history:emptyTitle")}</p>
+						<p className="text-sm mt-1">{t("history:emptyDescription")}</p>
+					</div>
+				) : tasks.length === 0 && searchQuery ? (
+					<div
+						className="flex flex-col items-center justify-center py-12 text-vscode-descriptionForeground"
+						data-testid="history-empty-search-state">
+						<SearchX className="size-12 mb-4 opacity-50" />
+						<p className="text-lg font-medium">{t("history:emptySearchTitle")}</p>
+						<p className="text-sm mt-1">{t("history:emptySearchDescription")}</p>
+						<button
+							className="mt-3 text-sm text-vscode-textLink-foreground hover:underline cursor-pointer"
+							onClick={() => setSearchQuery("")}
+							data-testid="clear-search-button">
+							{t("history:clearSearch")}
+						</button>
+					</div>
+				) : isSearchMode && flatTasks ? (
 					// Search mode: flat list with subtask prefix
 					<Virtuoso
 						className="flex-1 overflow-y-scroll"
@@ -261,57 +354,112 @@ const HistoryView = ({ onDone }: HistoryViewProps) => {
 						initialTopMostItemIndex={0}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div {...props} ref={ref} data-testid="virtuoso-item-list" role="list" />
 							)),
 						}}
 						itemContent={(_index, item) => (
-							<TaskItem
-								key={item.id}
-								item={item}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(item.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								className="m-2"
-							/>
+							<div role="listitem">
+								<TaskItem
+									key={item.id}
+									item={item}
+									variant="full"
+									showWorkspace={showAllWorkspaces}
+									isSelectionMode={isSelectionMode}
+									isSelected={selectedTaskIds.includes(item.id)}
+									onToggleSelection={toggleTaskSelection}
+									onDelete={handleDelete}
+									className="m-2"
+								/>
+							</div>
 						)}
 					/>
 				) : (
-					// Grouped mode: task groups with expandable subtasks
+					// Grouped mode: time-grouped sections with sticky headers
 					<Virtuoso
 						className="flex-1 overflow-y-scroll"
-						data={groups}
+						data={timeGroupListItems}
 						data-testid="virtuoso-container"
 						initialTopMostItemIndex={0}
+						endReached={isServerSidePagination ? handleEndReached : undefined}
+						overscan={200}
 						components={{
 							List: React.forwardRef((props, ref) => (
-								<div {...props} ref={ref} data-testid="virtuoso-item-list" />
+								<div {...props} ref={ref} data-testid="virtuoso-item-list" role="list" />
 							)),
+							Footer: () => {
+								if (!isServerSidePagination) return null
+
+								if (pagination.isLoading) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-descriptionForeground"
+											data-testid="loading-more-indicator">
+											<span className="codicon codicon-loading animate-spin mr-2" />
+											{t("history:loadingMore")}
+										</div>
+									)
+								}
+
+								if (pagination.error) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-errorForeground"
+											data-testid="error-indicator">
+											<span className="codicon codicon-error mr-2" />
+											{t(pagination.error)}
+										</div>
+									)
+								}
+
+								if (!pagination.hasMore && groups.length > 0) {
+									return (
+										<div
+											className="flex items-center justify-center py-4 text-vscode-descriptionForeground text-xs"
+											data-testid="end-of-list-indicator">
+											{t("history:endOfList")}
+										</div>
+									)
+								}
+
+								return null
+							},
 						}}
-						itemContent={(_index, group) => (
-							<TaskGroupItem
-								key={group.parent.id}
-								group={group}
-								variant="full"
-								showWorkspace={showAllWorkspaces}
-								isSelectionMode={isSelectionMode}
-								isSelected={selectedTaskIds.includes(group.parent.id)}
-								onToggleSelection={toggleTaskSelection}
-								onDelete={handleDelete}
-								onToggleExpand={() => toggleExpand(group.parent.id)}
-								onToggleSubtaskExpand={toggleExpand}
-								className="m-2"
-							/>
-						)}
+						itemContent={(_index, item) => {
+							if (item.type === "header") {
+								return (
+									<div
+										className="sticky top-0 z-10 bg-vscode-editor-background px-2 py-1.5 text-xs font-medium text-vscode-descriptionForeground uppercase tracking-wider border-b border-vscode-panel-border"
+										data-testid="time-group-header">
+										{item.label}
+									</div>
+								)
+							}
+							const group = item.group
+							return (
+								<div role="listitem">
+									<TaskGroupItem
+										key={group.parent.id}
+										group={group}
+										variant="full"
+										showWorkspace={showAllWorkspaces}
+										isSelectionMode={isSelectionMode}
+										isSelected={selectedTaskIds.includes(group.parent.id)}
+										onToggleSelection={toggleTaskSelection}
+										onDelete={handleDelete}
+										onToggleExpand={() => toggleExpand(group.parent.id)}
+										onToggleSubtaskExpand={toggleExpand}
+										className="m-2"
+									/>
+								</div>
+							)
+						}}
 					/>
 				)}
 			</TabContent>
 
 			{/* Fixed action bar at bottom - only shown in selection mode with selected items */}
 			{isSelectionMode && selectedTaskIds.length > 0 && (
-				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center">
+				<div className="fixed bottom-0 left-0 right-2 bg-vscode-editor-background border-t border-vscode-panel-border p-2 flex justify-between items-center transition-all duration-300 translate-y-0 opacity-100">
 					<div className="text-vscode-foreground">
 						{t("history:selectedItems", { selected: selectedTaskIds.length, total: tasks.length })}
 					</div>
