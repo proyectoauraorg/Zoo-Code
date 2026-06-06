@@ -149,10 +149,11 @@ export async function loadRequiredLanguageParsers(filesToParse: string[], source
 				language = await loadLanguage("php", sourceDirectory)
 				query = new Query(language, phpQuery)
 				break
-			case "swift":
+			case "swift": {
 				language = await loadLanguage("swift", sourceDirectory)
 				query = new Query(language, swiftQuery)
 				break
+			}
 			case "kt":
 			case "kts":
 				language = await loadLanguage("kotlin", sourceDirectory)
