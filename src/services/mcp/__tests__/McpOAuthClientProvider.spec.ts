@@ -188,7 +188,7 @@ describe("McpOAuthClientProvider", () => {
 
 			const metadata = provider.clientMetadata
 
-			expect(metadata.client_name).toBe("Roo Code")
+			expect(metadata.client_name).toBe("Zoo Code")
 			expect(metadata.redirect_uris).toEqual(["http://localhost:0/callback"])
 			expect(metadata.grant_types).toContain("authorization_code")
 			expect(metadata.response_types).toContain("code")
