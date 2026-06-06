@@ -383,3 +383,14 @@ export interface DiffStrategy {
 
 	getProgressStatus?(toolUse: ToolUse, result?: any): ToolProgressStatus
 }
+
+// ContentRef types — introduced by background editing PR, needed by ApplyDiffTool
+export interface ContentRef {
+	path?: string
+	line?: number
+	pattern?: string
+}
+
+export interface ContentRefParams {
+	transform?: string
+}
