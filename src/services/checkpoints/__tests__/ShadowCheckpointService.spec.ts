@@ -41,7 +41,7 @@ afterAll(() => {
 
 const initWorkspaceRepo = async ({
 	workspaceDir,
-	userName = "Roo Code",
+	userName = "Zoo Code",
 	userEmail = "support@roocode.com",
 	testFileName = "test.txt",
 	textFileContent = "Hello, world!",
@@ -414,7 +414,7 @@ describe.each([[RepoPerTaskCheckpointService, "RepoPerTaskCheckpointService"]])(
 				await fs.mkdir(workspaceDir, { recursive: true })
 				const mainGit = simpleGit(workspaceDir)
 				await mainGit.init()
-				await mainGit.addConfig("user.name", "Roo Code")
+				await mainGit.addConfig("user.name", "Zoo Code")
 				await mainGit.addConfig("user.email", "support@roocode.com")
 				await mainGit.addConfig("commit.gpgSign", "false")
 
@@ -423,7 +423,7 @@ describe.each([[RepoPerTaskCheckpointService, "RepoPerTaskCheckpointService"]])(
 				await fs.mkdir(nestedRepoPath, { recursive: true })
 				const nestedGit = simpleGit(nestedRepoPath)
 				await nestedGit.init()
-				await nestedGit.addConfig("user.name", "Roo Code")
+				await nestedGit.addConfig("user.name", "Zoo Code")
 				await nestedGit.addConfig("user.email", "support@roocode.com")
 				await nestedGit.addConfig("commit.gpgSign", "false")
 
@@ -486,7 +486,7 @@ describe.each([[RepoPerTaskCheckpointService, "RepoPerTaskCheckpointService"]])(
 				await fs.mkdir(workspaceDir, { recursive: true })
 				const mainGit = simpleGit(workspaceDir)
 				await mainGit.init()
-				await mainGit.addConfig("user.name", "Roo Code")
+				await mainGit.addConfig("user.name", "Zoo Code")
 				await mainGit.addConfig("user.email", "support@roocode.com")
 				await mainGit.addConfig("commit.gpgSign", "false")
 
@@ -1045,7 +1045,7 @@ describe("worktree path comparison", () => {
 			await fs.mkdir(workspaceDir, { recursive: true })
 			const mainGit = simpleGit(workspaceDir)
 			await mainGit.init()
-			await mainGit.addConfig("user.name", "Roo Code")
+			await mainGit.addConfig("user.name", "Zoo Code")
 			await mainGit.addConfig("user.email", "support@roocode.com")
 			await mainGit.addConfig("commit.gpgSign", "false")
 
@@ -1081,7 +1081,7 @@ describe("worktree path comparison", () => {
 			await fs.mkdir(workspaceDir, { recursive: true })
 			const mainGit = simpleGit(workspaceDir)
 			await mainGit.init()
-			await mainGit.addConfig("user.name", "Roo Code")
+			await mainGit.addConfig("user.name", "Zoo Code")
 			await mainGit.addConfig("user.email", "support@roocode.com")
 			await mainGit.addConfig("commit.gpgSign", "false")
 
